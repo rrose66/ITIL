@@ -1,0 +1,28 @@
+Sub GetNewWizIDsV00()
+    Debug.Print "Calling GetListOfArchivedFilesV01"
+    Debug.Print Now()
+    Call GetListOfArchivedFilesV02
+    'Stop
+    
+    Debug.Print Now()
+    Debug.Print "GetListOfArchivedFilesV01 is done and starting GetNewFilesV01"
+    Call GetNewFilesV02
+    'Stop
+
+    Debug.Print Now()
+    Debug.Print "GetNewFilesV01 is done and starting FlagCoruptedFilesV00"
+    Call FlagCoruptedFilesV00 'Works from local drive and checks for corupted file
+    'Stop
+
+    Debug.Print Now()
+    Debug.Print "FlagCoruptedFilesV00 is done and starting ETL_ArchivesToWiz_IDs"
+    Call ETL_ArchivesToWiz_IDsV00 'update normalized supporting file
+    'Stop
+    
+    Debug.Print Now()
+    Debug.Print "ETL_ArchivesToWiz_IDs is done and starting GetWizIDs_v01"
+    Call GetWizIDs_v01 'WIP now works from archived file name list that already knows if file was corrupt
+    'Stop
+    
+    Call GetWizInvV00
+End Sub

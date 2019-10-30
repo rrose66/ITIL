@@ -1,0 +1,74 @@
+Function FormattedDur(intSeconds As Double)
+        'calculate and format the duration
+        'duration is based on days:hours:minutes:seconds
+        'the initial calculation is in seconds
+        'days is simply seconds \ (60 seconds in a minute * 60 minutes in a hour * 24 hours in a day) or 86400
+        'hours minutes and seconds those units of time left over from each calculation
+'            strDur = Abs(DateDiff("s", dtLast, dtCurrent))
+                Dim strDays As String
+    Dim strENV As String * 1
+    Dim strPath As String * 100
+    Dim strFullPath As String * 200
+    Dim strDur As String
+    Dim strUser As String
+    Dim strSeconds As String
+    Dim strMinutes As String
+    Dim ModuleFile As String * 50
+    Dim strCMD As String
+    Dim strVersion As String * 8
+    Dim strHours As String
+ '   Dim intER As Integer
+    Dim intSR As Integer
+    Dim intWS As Integer
+    Dim intSecondsLeft As Double
+    Dim intTotalSeconds As Double
+  '  Dim intWiz_ID As Integer
+    Dim intWiz_Ver_ID As Integer
+    'Dim intTicket As Integer
+    Dim intRC As Integer
+    Dim dtCurrent As Date
+    Dim dtLast As Date
+
+            strDur = intSeconds
+            intSecondsLeft = intSeconds
+            intTotalSeconds = intSecondsLeft
+            'intTotalSeconds = 0
+            'Calculate the rounded days taken
+            strDays = Fix(intSecondsLeft / 86400)
+            'now format the string with padded zeroes
+            If strDays < 10 And strDays > 0 Then
+                strDays = "00" & strDays
+            ElseIf strDays < 100 And strDays > 9 Then
+                strDays = "0" & strDays
+            ElseIf strDays = 0 Then
+                strDays = "000"
+            End If
+            intSecondsLeft = intSecondsLeft - (strDays * 86400)
+            'convert left over seconds to hours
+            strHours = Fix(intSecondsLeft / (60 * 60))
+            intSecondsLeft = intSecondsLeft - (strHours * 60 * 60)
+            'now format the string with padded zeroes
+            If strHours > 0 And strHours < 10 Then
+                strHours = "0" & strHours
+            ElseIf strHours = 0 Then
+                strHours = "00"
+            End If
+            'convert remaining seconds to minutes left
+            strMinutes = Fix(intSecondsLeft / 60)
+            intSecondsLeft = intSecondsLeft - (strMinutes * 60)
+            If strMinutes > 0 And strMinutes < 10 Then
+                strMinutes = "0" & strMinutes
+            ElseIf strMinutes = 0 Then
+                strMinutes = "00"
+            End If
+            'calculate seconds left
+            strSeconds = Fix(intSecondsLeft)
+            If strSeconds < 10 And strSeconds > 0 Then
+                strSeconds = "0" & strSeconds
+            ElseIf strSeconds = 0 Then
+                strSeconds = "00"
+            End If
+            '******************************************
+            strDur = strDays & ":" & strHours & ":" & strMinutes & ":" & strSeconds
+    FormattedDur = strDur
+End Function

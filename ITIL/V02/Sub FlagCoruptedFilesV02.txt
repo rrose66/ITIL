@@ -1,0 +1,133 @@
+Sub FlagCoruptedFilesV02()
+'NeededValidations
+    'Process only the Sharepoint files since these files are moved to archives weekly
+    blnDEV = False 'when true displays the file
+    Dim blnHistory As Boolean 'True when the shared drive files are used
+    blnHistory = False 'when true deletes the file from the local drive
+    On Error GoTo FileIssue
+    Dim blnIssue As Boolean
+    'Dim rstQ As Recordset
+    Dim rstRE As Recordset 'Count to see if the date time exists in the ITIL_DateTimes
+    Dim rstDTid As Recordset
+    Dim AFdb As DAO.Database
+    Dim ITILdb As DAO.Database
+    Dim DTdb As DAO.Database
+    Dim rstIF As DAO.Recordset
+    Dim fc As Object
+    Dim fs As Object
+    Dim f1 As Object
+    Dim fso As Object
+    Dim strCMD As String
+    'Dim strFN As String
+    Dim lngDT_ID As Long
+    Dim dtLastFA As Date 'Last File Added
+    Dim f As Object
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set rstIF = CurrentDb.OpenRecordset("ITIL_Wiz_IDs", dbOpenTable)
+    rstIF.Index = "Wiz_Name"
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    If blnDEV Then
+        xlsApp.Visible = True
+    Else
+        xlsApp.Visible = False
+    End If
+    xlsApp.DisplayAlerts = False
+    Set fs = CreateObject("Scripting.filesystemobject")
+    'strFN = STR_SHAREPOINT_PATH
+    blnIssue = False
+    Set f = fs.GetFolder(STR_SOURCE_PATH)
+    Set fc = f.Files
+    blnIssue = False
+    For Each f1 In fc
+        rstIF.Seek "=", f1.Name
+        If rstIF.NoMatch Then
+            'Stop
+            'try to open
+            strCMD = ""
+            strCMD = Trim(STR_SOURCE_PATH) & Trim(f1.Name)
+            Set xlsWB = xlsApp.Workbooks.Open(strCMD)
+            If Not blnIssue Then
+                xlsWB.UpdateLinks = xlUpdateLinksNever
+                xlsWB.Save
+                xlsWB.Close
+    '            fso.MoveFile strCMD, strPath05
+                strCMD = ""
+                strCMD = "update ITIL_Wiz_File_Names set File_Validated = True"
+                strCMD = strCMD & " where FileName = " & Chr(34) & f1.Name & Chr(34)
+                CurrentDb.Execute (strCMD)
+            End If
+            'if corupt update issue to true in error handler
+            'add record to ITIL_ArchivedImportFiles
+            If blnIssue = True Then
+                strCMD = ""
+                strCMD = "update ITIL_Wiz_File_Names set Issue = " & blnIssue
+                strCMD = strCMD & " where FileName = " & Chr(34) & f1.Name & Chr(34)
+                CurrentDb.Execute (strCMD)
+'                If fso.FileExists(STR_BAD_PATH & f1.Name) Then
+'                    fso.DeleteFile STR_SOURCE_PATH & f1.Name
+'                Else
+'                    fso.MoveFile STR_SOURCE_PATH & f1.Name, STR_BAD_PATH
+'                End If
+            End If
+        Else
+            If rstIF.Fields("File_Validated").Value = True Then
+            Else
+                strCMD = ""
+                strCMD = Trim(STR_SOURCE_PATH) & Trim(f1.Name)
+                Set xlsWB = xlsApp.Workbooks.Open(strCMD)
+                xlsWB.UpdateLinks = xlUpdateLinksNever
+                xlsWB.Save
+                xlsWB.Close
+                strCMD = ""
+                strCMD = "update ITIL_Wiz_File_Names set File_Validated = True"
+                strCMD = strCMD & " where FileName = " & Chr(34) & f1.Name & Chr(34)
+                CurrentDb.Execute (strCMD)
+            End If
+        End If
+        blnIssue = False
+    Next
+'    blnIssue = False
+'    Set f = fs.GetFolder(STR_ARCHIVES_PATH)
+'    Set fc = f.Files
+'    blnIssue = False
+'    Set rstIF = CurrentDb.OpenRecordset("ITIL_Import_File", dbOpenTable)
+'    rstIF.Index = "PrimaryKey"
+'    For Each f1 In fc
+'        'try to open
+'        strCMD = ""
+'        strCMD = Trim(STR_ARCHIVES_PATH) & Trim(f1.Name)
+'        If Right(f1.Name, 1) = "S" Then
+'            rstIF.Seek "=", f1.Name
+'            If Not rstIF.NoMatch And Not rstIF.Fields("Issue").Value Then
+'                Set xlsWB = xlsApp.Workbooks.Open(strCMD)
+'                If Not blnIssue Then
+'        '            xlsWB.UpdateLinks = xlUpdateLinksNever
+'        '            xlsWB.Save
+'                    xlsWB.Close
+'        '            fso.MoveFile strCMD, strPath05
+'                End If
+'            End If
+'        End If
+'        'if corupt update issue to true in error handler
+'        'add record to ITIL_ArchivedImportFiles
+'        If blnIssue = True Then
+'            strCMD = ""
+'            strCMD = "update ITIL_Import_Files set Issue = " & blnIssue
+'            strCMD = strCMD & " where File_Name = " & Chr(34) & f1.Name & Chr(34)
+'            CurrentDb.Execute (strCMD)
+'            'the below command will capture too many files so stop doing it
+'            'fso.CopyFle strFN & f1.Name, "C:\Users\RROSE66\Documents\Archives\Import_Files\Bad\"
+'        End If
+'        blnIssue = False
+'    Next
+
+FileIssue:
+    If Err.Number = 1004 Then
+        blnIssue = True
+        Resume Next
+    Else
+        blnIssue = True
+        Resume Next
+    End If
+End Sub

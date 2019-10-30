@@ -1,0 +1,11 @@
+Sub LocalFileCleanUpV02()
+    Dim fso As Object
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set rstQ = CurrentDb.OpenRecordset("CoruptFiles")
+    While Not rstQ.EOF
+        If fso.FileExists(STR_SOURCE_PATH & rstQ.Fields("FileName").Value) Then
+            fso.DeleteFile STR_SOURCE_PATH & rstQ.Fields("FileName").Value
+        End If
+        rstQ.MoveNext
+    Wend
+End Sub

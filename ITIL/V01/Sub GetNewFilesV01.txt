@@ -1,0 +1,54 @@
+Sub GetNewFilesV01()
+    Dim rstNewFile As Recordset
+    Dim rstCoruptFiles As Recordset
+    Dim rstCFC As Recordset
+    Dim rstLFN_ID As Recordset
+    'Dim strSFP As String 'Source File Path
+    Dim strTFP As String 'Target File Path
+    Dim fso As Object 'File System Object
+    Dim fpo As Object 'File Path Object
+    Dim fco As Object 'File Collection Object
+    Dim fno As Object 'File Name Object
+    Dim lngFN_ID As Long
+    'strSFP = "S:\AVBOM2\AVBOM2 Import Files\archive 2015\"
+    strTFP = "C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\"
+    Set fso = CreateObject("scripting.filesystemobject")
+    'Flag all files except xls
+    strCMD = ""
+    strCMD = strCMD & "update  ITIL_S_Drive SET ITIL_S_Drive.Issue = True WHERE Right([File_Name],1)<> "
+    strCMD = strCMD & Chr(34) & "S" & Chr(34)
+    CurrentDb.Execute (strCMD)
+    'now update ITIL_Wiz_File_Names with corupt files
+    Set rstCoruptFiles = CurrentDb.OpenRecordset("NewCoruptFiles")
+    Set rstCFC = CurrentDb.OpenRecordset("select count(*) from NewCoruptFiles")
+    Set rstLFN_ID = CurrentDb.OpenRecordset("select FN_ID from ITIL_Counters")
+    lngFN_ID = rstLFN_ID.Fields(0).Value
+    strCMD = ""
+    strCMD = strCMD & "update ITIL_Counters set FN_ID = " & lngFN_ID + rstCFC.Fields(0).Value
+    CurrentDb.Execute (strCMD)
+    If rstCoruptFiles.RecordCount > 0 Then
+        rstCoruptFiles.MoveFirst
+    End If
+    While Not rstCoruptFiles.EOF
+        lngFN_ID = lngFN_ID + 1
+        strCMD = ""
+        strCMD = strCMD & "insert into ITIL_Wiz_File_Names(FN_ID, Path_ID, FileName, Issue) select "
+        strCMD = strCMD & lngFN_ID
+        strCMD = strCMD & ", " & rstCoruptFiles.Fields("Path_ID").Value
+        strCMD = strCMD & ", " & Chr(34) & rstCoruptFiles.Fields("File_Name").Value & Chr(34)
+        strCMD = strCMD & ", " & rstCoruptFiles.Fields("Issue").Value
+        CurrentDb.Execute (strCMD)
+        rstCoruptFiles.MoveNext
+    Wend
+    Set rstNewFile = CurrentDb.OpenRecordset("NewImportFilesV01")
+    While Not rstNewFile.EOF
+        If rstNewFile.Fields("Path_ID").Value = 2 Then
+            Stop
+            fso.MoveFile rstNewFile.Fields(0).Value, strTFP
+        Else
+            Stop
+            fso.CopyFile rstNewFile.Fields(0).Value, strTFP
+        End If
+        rstNewFile.MoveNext
+    Wend
+End Sub

@@ -1,0 +1,60 @@
+Sub FlagCoruptedFilesV00()
+    blnDEV = False 'when true displays the file
+    Dim blnHistory As Boolean 'True when the shared drive files are used
+    blnHistory = False 'when true deletes the file from the local drive
+    On Error GoTo FileIssue
+    Dim blnIssue As Boolean
+    Dim rstQ As Recordset
+    Dim rstRE As Recordset 'Count to see if the date time exists in the ITIL_DateTimes
+    Dim rstDTid As Recordset
+    Dim AFdb As DAO.Database
+    Dim ITILdb As DAO.Database
+    Dim DTdb As DAO.Database
+    Dim fc As Object
+    Dim fs As Object
+    Dim f1 As Object
+    Dim fso As Object
+    Dim strCMD As String
+    Dim strFN As String
+    Dim lngDT_ID As Long
+    Dim dtLastFA As Date 'Last File Added
+    Dim f As Object
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    If blnDEV Then
+        xlsApp.Visible = True
+    Else
+        xlsApp.Visible = False
+    End If
+    xlsApp.DisplayAlerts = False
+    Set fs = CreateObject("Scripting.filesystemobject")
+    strFN = "C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\"
+    blnIssue = False
+    Set f = fs.GetFolder(strFN)
+    Set fc = f.Files
+    blnIssue = False
+    For Each f1 In fc
+        'try to open
+        Set xlsWB = xlsApp.Workbooks.Open("C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\" & f1.Name)
+        If Not blnIssue Then
+            xlsWB.UpdateLinks = xlUpdateLinksNever
+            xlsWB.Save
+            xlsWB.Close
+        End If
+        'if corupt update issue to true in error handler
+        'add record to ITIL_ArchivedImportFiles
+        If blnIssue = True Then
+            strCMD = ""
+            strCMD = "update ITIL_S_Drive set Issue = " & blnIssue
+            strCMD = strCMD & " where File_Name = " & Chr(34) & f1.Name & Chr(34)
+            CurrentDb.Execute (strCMD)
+        End If
+        blnIssue = False
+        fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\" & f1.Name
+        'End If
+    Next
+FileIssue:
+    blnIssue = True
+    Resume Next
+End Sub

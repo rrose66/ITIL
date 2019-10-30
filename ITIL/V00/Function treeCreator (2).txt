@@ -1,0 +1,28 @@
+Function treeCreator(intN_ID As Integer) As String
+    Dim strFullPath As String
+    Dim rstRD As Recordset
+    Dim intN_Parent As Integer
+    Dim strCMD As String
+    Dim intN As Integer
+    strCMD = "select n_name, n_parent from cm_trees where n_id = " & intN_ID
+    Set rstRD = CurrentDb.OpenRecordset(strCMD)
+    strFullPath = rstRD.Fields("n_name").Value
+    intN_Parent = rstRD.Fields("n_parent").Value
+    Set rstRD = Nothing
+    'While intN_Parent > 1
+    Do Until IsNull(intN_Parent)
+        'build full path from bottom up
+        strCMD = "select n_name, n_parent from cm_trees where n_id = " & intN_Parent
+        Set rstRD = CurrentDb.OpenRecordset(strCMD)
+        strFullPath = rstRD.Fields("n_name").Value & "/" & strFullPath
+        If IsNull(rstRD.Fields("n_parent").Value) Then
+           Exit Do
+        Else
+            intN_Parent = rstRD.Fields("n_parent").Value
+        End If
+        Set rstRD = Nothing
+'        intN_ID = intN_ID - 1
+    'Wend
+    Loop
+    treeCreator = strFullPath
+End Function

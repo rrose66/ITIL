@@ -1,0 +1,60 @@
+Sub GetListOfArchivedFilesV03()
+    'changing approach to source folder where new files from s drive will already be
+    'and SharePoint files will go
+    Dim fso As Object 'File System Object
+    Dim lngLine As Long
+    Dim blnGotFile As Boolean
+    Dim rstD As DAO.Recordset
+    Dim strInput As String
+    Set fso = CreateObject("scripting.filesystemobject")
+    CurrentDb.Execute ("Delete from ITIL_Import_Files")
+    lngLine = 1
+    'move to weekly task
+    blnGotFile = Shell(STR_BAT_CMD_PATH, vbNormalFocus)
+    Stop
+    Set rstD = CurrentDb.OpenRecordset("ITIL_Import_Files", dbOpenTable)
+    Open STR_SOURCE_DIR_PATH For Input As #1
+    'Open SourceFile For Input As #1
+    Do While Not EOF(1)
+        Line Input #1, strInput
+        'Debug.Print strInput
+        If lngLine > 7 And Mid(strInput, 1, 10) <> "          " Then
+            strCMD = ""
+            strCMD = strCMD & "insert into ITIL_Import_Files (File_DT, File_Size, File_Name) select "
+            strCMD = strCMD & "#" & Mid(strInput, 1, 20) & "#"
+            strCMD = strCMD & ", " & CLng(Mid(strInput, 22, 17))
+            strCMD = strCMD & ", " & Chr(34) & Trim(Mid(strInput, 40, 200)) & Chr(34)
+            CurrentDb.Execute (strCMD)
+        End If
+        lngLine = lngLine + 1
+    Loop
+    Close #1
+    'STR_ARCHIVE_DIR_PATH
+    'ITIL_Archive_Files
+    lngLine = 1
+    'Stop
+    Open STR_ARCHIVE_DIR_PATH For Input As #2
+'    'Open SourceFile For Input As #2
+    Do While Not EOF(2)
+        Line Input #2, strInput
+        'Debug.Print strInput
+        If lngLine > 7 And Mid(strInput, 1, 10) <> "          " Then
+            rstD.Index = "PrimaryKey"
+            rstD.Seek "=", Trim(Mid(strInput, 40, 200))
+            If rstD.NoMatch Then
+                strCMD = ""
+                strCMD = strCMD & "insert into ITIL_Import_Files (File_DT, File_Size, File_Name, Path_ID) select "
+                strCMD = strCMD & "#" & Mid(strInput, 1, 20) & "#"
+                strCMD = strCMD & ", " & CLng(Mid(strInput, 22, 17))
+                strCMD = strCMD & ", " & Chr(34) & Trim(Mid(strInput, 40, 200)) & Chr(34)
+                strCMD = strCMD & ", " & 2
+                CurrentDb.Execute (strCMD)
+                'now copy the archived file to the local dir
+                'Stop
+                fso.CopyFile "S:\AVBOM2\AVBOM2 Import Files\archive 2015\" & Trim(Mid(strInput, 40, 200)) & Chr(34), "C:\Users\RROSE66\Documents\Archives\Import_Files\Source\"
+            End If
+        End If
+        lngLine = lngLine + 1
+    Loop
+    Close #2
+End Sub

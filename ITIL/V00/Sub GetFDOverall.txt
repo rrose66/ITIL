@@ -1,0 +1,63 @@
+Sub GetFDOverall()
+    blnDEV = True 'when true displays the file
+    Dim blnHistory As Boolean 'True when the shared drive files are used
+    blnHistory = False 'when true deletes the file from the local drive
+    Dim intCR As Integer
+    Dim rstSource As Recordset
+    Dim fso As Object 'File System Object
+    Dim FDdb As DAO.Database 'FD_Overall
+    Set FDdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_FD_Overall.accdb", 0)
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    Set xlsApp = CreateObject("Excel.Application")
+    xlsApp.DisplayAlerts = False
+    If blnDEV Then
+        xlsApp.Visible = True
+    Else
+        xlsApp.Visible = False
+    End If
+    Set rstSource = CurrentDb.OpenRecordset("WizFDOverallToGather")
+    rstSource.MoveFirst
+    While Not rstSource.EOF
+        fso.CopyFile rstSource.Fields(2).Value, "C:\Users\RROSE66\Documents\Archives\Import_Files\"
+        Set xlsWB = xlsApp.Workbooks.Open("C:\Users\RROSE66\Documents\Archives\Import_Files\" & rstSource.Fields(1).Value)
+        xlsWB.UpdateLinks = xlUpdateLinksNever
+        Set xlsWS = xlsWB.Worksheets("FD-Overall")
+        intCR = 12
+        Do Until IsEmpty(xlsWS.Cells(intCR, 1).Value)
+            strCMD = ""
+            strCMD = strCMD & "insert into Wiz_FD_Overall ("
+            strCMD = strCMD & "Wiz_ID, "
+            strCMD = strCMD & "Master_Row, "
+            strCMD = strCMD & "Prefix_Ford_Part, "
+            strCMD = strCMD & "Base_Ford_Part, "
+            strCMD = strCMD & "Suffix_Ford_Part, "
+            strCMD = strCMD & "Name_Ford_Part, "
+            strCMD = strCMD & "Lead_Program_Ford_Part, "
+            strCMD = strCMD & "Eff_In_Usage, "
+            strCMD = strCMD & "Eff_Out_Usage, "
+            strCMD = strCMD & "D_R_CDSID_Usage, "
+            strCMD = strCMD & "Usage_Certification_Usage "
+            strCMD = strCMD & ") select "
+            strCMD = strCMD & rstSource.Fields(3).Value
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 1).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 2).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 3).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 4).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Cells(intCR, 5).Value, Chr(34), "'") & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Cells(intCR, 7).Value, Chr(34), "'") & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 19).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 20).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 25).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 186).Value & Chr(34)
+            FDdb.Execute (strCMD)
+            intCR = intCR + 1
+        Loop
+        xlsWB.Close
+        fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\" & rstSource.Fields(1).Value
+        rstSource.MoveNext
+        Set xlsWB = Nothing
+    Wend
+'    MsgBox ("FD_Over are populated")
+End Sub

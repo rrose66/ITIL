@@ -1,0 +1,69 @@
+Sub GetEndItems()
+    blnDEV = False 'when true displays the file
+    Dim blnHistory As Boolean 'True when the shared drive files are used
+    blnHistory = False 'when true deletes the file from the local drive
+    Dim intCR As Integer
+    Dim rstSource As Recordset
+    Dim fso As Object 'File System Object
+    Dim EIdb As DAO.Database 'End Items
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set EIdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_End_Items.accdb", 0)
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    Set xlsApp = CreateObject("Excel.Application")
+    xlsApp.DisplayAlerts = False
+    If blnDEV Then
+        xlsApp.Visible = True
+    Else
+        xlsApp.Visible = False
+    End If
+    Set rstSource = CurrentDb.OpenRecordset("WizEndItemsToGather")
+    rstSource.MoveFirst
+    'strWiz_Name = rstSource.Fields(1).Value
+    While Not rstSource.EOF
+        fso.CopyFile rstSource.Fields(2).Value, "C:\Users\RROSE66\Documents\Archives\Import_Files\"
+        Set xlsWB = xlsApp.Workbooks.Open("C:\Users\RROSE66\Documents\Archives\Import_Files\" & rstSource.Fields(1).Value)
+        xlsWB.UpdateLinks = xlUpdateLinksNever
+        Set xlsWS = xlsWB.Worksheets("End Items")
+        intCR = 3
+        Do Until IsEmpty(xlsWS.Cells(intCR, 1).Value)
+            strCMD = ""
+            strCMD = strCMD & "insert into Wiz_End_Items ("
+            strCMD = strCMD & "Wiz_ID, "
+            strCMD = strCMD & "BOM_Action, "
+            strCMD = strCMD & "Master_Row, "
+            strCMD = strCMD & "Prefix, "
+            strCMD = strCMD & "Base, "
+            strCMD = strCMD & "Suffix, "
+            strCMD = strCMD & "Part_Name, "
+            strCMD = strCMD & "Program, "
+            strCMD = strCMD & "CPSC, "
+            strCMD = strCMD & "Sequence, "
+            strCMD = strCMD & "Effect_In, "
+            strCMD = strCMD & "Effect_Out, "
+            strCMD = strCMD & "DR_CDSID "
+            strCMD = strCMD & ") select "
+            strCMD = strCMD & rstSource.Fields(3).Value
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 1).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 2).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 3).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 4).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 5).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Cells(intCR, 6).Value, Chr(34), "'") & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 7).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 8).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 9).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 11).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 12).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 13).Value & Chr(34)
+            EIdb.Execute (strCMD)
+            intCR = intCR + 1
+        Loop
+        xlsWB.Close
+        fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\" & rstSource.Fields(1).Value
+        rstSource.MoveNext
+        Set xlsWB = Nothing
+        'strWiz_Name = rstSource.Fields(1).Value
+    Wend
+'    MsgBox ("End Items are populated")
+End Sub

@@ -1,0 +1,5 @@
+Function GetNextWiz_ID() As Long
+    Dim rstWiz_ID As Recordset
+    Set rstWiz_ID = CurrentDb.OpenRecordset("NextWiz_ID")
+    GetNextWiz_ID = rstWiz_ID.Fields(0).Value
+End Function

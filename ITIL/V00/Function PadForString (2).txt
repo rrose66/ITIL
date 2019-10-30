@@ -1,0 +1,3 @@
+Function PadForString(intPad As Integer, strTask As String)
+    PadForString = String(intPad * 3, " ") & strTask
+End Function

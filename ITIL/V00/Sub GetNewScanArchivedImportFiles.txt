@@ -1,0 +1,50 @@
+Sub GetNewScanArchivedImportFiles()
+    Dim rstQ As Recordset
+    Dim rstRE As Recordset 'Count to see if the date time exists in the ITIL_DateTimes
+    Dim rstDTid As Recordset
+'    Dim BaseDB As DAO.Database
+    Dim AFdb As DAO.Database
+    Dim ITILdb As DAO.Database
+    Dim DTdb As DAO.Database
+    Dim fc As Object
+    Dim fs As Object
+    Dim f1 As Object
+    Dim strCMD As String
+    Dim strFN As String
+    Dim lngDT_ID As Long
+    Dim dtLastFA As Date 'Last File Added
+    Dim f As Object
+    Set AFdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_ArchivedFileNamesBase.accdb", 0)
+    'Set ITILdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Data.accdb", 0)
+    Set DTdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_DateTimes.accdb", 0)
+    'AFdb.Execute ("Delete from ITIL_ArchivedImportFiles")
+    Set rstQ = CurrentDb.OpenRecordset("select LastImportScanned from ITIL_Counters")
+'    Set BaseDB = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ArchivedFileNamesBase.accdb", 0)
+    Set fs = CreateObject("Scripting.filesystemobject")
+    dtLastFA = rstQ.Fields(0).Value
+    strFN = "S:\AVBOM2\AVBOM2 Import Files\archive 2015"
+    Set f = fs.GetFolder(strFN)
+    Set fc = f.Files
+    For Each f1 In fc
+        If f1.DateCreated > dtLastFA Then
+            strCMD = ""
+            strCMD = "update ITIL_Counters set LastImportScanned = " & "#" & f1.DateCreated & "#"
+            CurrentDb.Execute (strCMD)
+            'now check to see if this is a new date to the DateTimes table ITIL_DateTimeRef
+            strCMD = ""
+            strCMD = strCMD & "select count(*) from ITIL_DateTimeRef where ITIL_DateTime = #" & f1.DateCreated & "#"
+            Set rstRE = DTdb.OpenRecordset(strCMD)
+            If rstRE.Fields(0).Value = 0 Then
+                CurrentDb.Execute ("update ITIL_Counters set DT_ID = DT_ID+1")
+                Set rstDTid = CurrentDb.OpenRecordset("select DT_ID from ITIL_Counters")
+                CurrentDb.Execute ("insert into ITIL_DateTimeRef (DT_ID,ITIL_DateTime) select " & rstDTid.Fields(0).Value & ", #" & f1.DateCreated & "#")
+            End If
+            'now add it to the ITIL_ArchivedImportFiles
+            strCMD = ""
+            strCMD = "insert into ITIL_ArchivedImportFiles (FileName, FileTimeStamp) select "
+            strCMD = strCMD & Chr(34) & f1.Name & Chr(34)
+            strCMD = strCMD & ", #" & f1.DateCreated & "#"
+            AFdb.Execute (strCMD)
+        End If
+    Next
+End Sub

@@ -1,0 +1,56 @@
+Sub GetListOfArchivedFilesV01()
+    Dim blnGotFile As Boolean
+    Dim lngLine As Long
+    Dim strCMD As String
+    Dim SourceFile As String
+    Dim strInput As String
+    Dim dbAFN As DAO.Database
+    Dim rstD As DAO.Recordset
+    CurrentDb.Execute ("Delete from ITIL_S_Drive")
+    lngLine = 1
+    blnGotFile = Shell("C:\Users\RROSE66\Documents\ITIL\getdirfroms.bat", vbNormalFocus)
+    Stop
+    Set rstD = CurrentDb.OpenRecordset("ITIL_S_Drive", dbOpenTable)
+    Open "C:\Users\RROSE66\Documents\ITIL\Sdrive.txt" For Input As #1
+    'Open SourceFile For Input As #1
+    Do While Not EOF(1)
+        Line Input #1, strInput
+        'Debug.Print strInput
+        If lngLine > 7 And Mid(strInput, 1, 10) <> "          " Then
+            strCMD = ""
+            strCMD = strCMD & "insert into ITIL_S_Drive (File_DT, File_Size, File_Name, Path_ID) select "
+            strCMD = strCMD & "#" & Mid(strInput, 1, 20) & "#"
+            strCMD = strCMD & ", " & CLng(Mid(strInput, 22, 17))
+            strCMD = strCMD & ", " & Chr(34) & Trim(Mid(strInput, 40, 200)) & Chr(34)
+            strCMD = strCMD & ", " & 1
+            CurrentDb.Execute (strCMD)
+        End If
+        lngLine = lngLine + 1
+    Loop
+    Close #1
+    
+    lngLine = 1
+    'Stop
+    Open "C:\Users\RROSE66\Documents\ITIL\SharePoint.txt" For Input As #2
+    'Open SourceFile For Input As #2
+    Do While Not EOF(2)
+        Line Input #2, strInput
+        'Debug.Print strInput
+        If lngLine > 7 And Mid(strInput, 1, 10) <> "          " Then
+            rstD.Index = "PrimaryKey"
+            rstD.Seek "=", Trim(Mid(strInput, 40, 200))
+            If rstD.NoMatch Then
+                strCMD = ""
+                strCMD = strCMD & "insert into ITIL_S_Drive (File_DT, File_Size, File_Name, Path_ID) select "
+                strCMD = strCMD & "#" & Mid(strInput, 1, 20) & "#"
+                strCMD = strCMD & ", " & CLng(Mid(strInput, 22, 17))
+                strCMD = strCMD & ", " & Chr(34) & Trim(Mid(strInput, 40, 200)) & Chr(34)
+                strCMD = strCMD & ", " & 2
+                CurrentDb.Execute (strCMD)
+            End If
+            
+        End If
+        lngLine = lngLine + 1
+    Loop
+    Close #2
+End Sub

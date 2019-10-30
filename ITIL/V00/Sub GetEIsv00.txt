@@ -1,0 +1,44 @@
+Sub GetEIsv00()
+    Dim EIdb As DAO.Database
+    Set rstQ = CurrentDb.OpenRecordset("NeededEIsV00")
+    Set EIdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_End_Items.accdb", 0)
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    xlsApp.Visible = True
+    xlsApp.DisplayAlerts = False
+    While Not rstQ.EOF
+        Set xlsWB = xlsApp.Workbooks.Open(STR_SOURCE_PATH & rstQ.Fields("FileName").Value)
+        xlsWB.UpdateLinks = xlUpdateLinksNever
+        intER = 4
+        xlsWB.Worksheets("End Items").Select
+        While Not IsEmpty(xlsWB.ActiveSheet.Cells(intER, 6).Value)
+            intER = intER + 1
+        Wend
+        'If intER > 1 Then
+            For intER = 3 To intER + 1
+                strCMD = ""
+                strCMD = strCMD & "insert into Wiz_End_Items ("
+                strCMD = strCMD & "[Wiz_ID], [BOM_Action], [Master_Row], [Prefix], [Base], [Suffix], [Part_Name], [Program]"
+                strCMD = strCMD & ", [CPSC], [Sequence], [Owning_Activity],[Effect_In], [Effect_Out]"
+                strCMD = strCMD & ") select "
+                strCMD = strCMD & rstQ.Fields("Wiz_ID").Value
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 1).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 2).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 3).Value, "&", " and ") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 4).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 5).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 6).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 7).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 8).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 9).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 10).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 11).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 12).Value, Chr(34), "'") & Chr(34)
+                EIdb.Execute (strCMD)
+            Next intER
+        'End If
+        xlsWB.Close
+        rstQ.MoveNext
+    Wend
+
+End Sub

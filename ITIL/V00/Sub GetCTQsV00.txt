@@ -1,0 +1,55 @@
+Sub GetCTQsV00()
+    'All files had to have been processed before this could be run
+    Dim blnIssue As Boolean
+    Dim rstF As Recordset
+    Dim xlsApp As New Excel.Application
+    Dim xlsWB As New Excel.Workbook
+    Dim xlsWS As New Excel.Worksheet
+    Dim CTQdb As DAO.Database
+    Dim fso As Object 'File System Object
+    Dim intRC As Integer
+    Dim fsoTarget As Object
+    Dim fpoTarget As Object
+    Dim fcoTarget As Object
+    Dim fnoTarget As Object
+    Dim strFPtarget As String
+    strFPtarget = "C:\Users\RROSE66\Documents\Archives\Import_Files\Source\"
+    Set fsoTarget = CreateObject("Scripting.filesystemobject")
+    Set fpoTarget = fsoTarget.GetFolder(strFPtarget)
+    Set fcoTarget = fpoTarget.Files
+    Set xlsApp = CreateObject("Excel.Application")
+    xlsApp.Visible = False
+    xlsApp.DisplayAlerts = False
+    Set xlsWB = xlsApp.ActiveWorkbook
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set CTQdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_CTQs.accdb", 0)
+    blnIssue = False
+    Set rstF = CurrentDb.OpenRecordset("NeededCTQs")
+    While Not rstF.EOF
+        If Not fsoTarget.FileExists(strFPtarget & rstF.Fields("Wiz_Name").Value) Then
+            fso.CopyFile "S:\AVBOM2\AVBOM2 Import Files\archive 2015\" & rstF.Fields("Wiz_Name").Value, "C:\Users\RROSE66\Documents\Archives\Import_Files\Source\"
+        End If
+'            fso.MoveFile strSourcePath & rstF.Fields("Wiz_Name").Value, "C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\"
+            Set xlsWB = xlsApp.Workbooks.Open("C:\Users\RROSE66\Documents\Archives\Import_Files\Source\" & rstF.Fields("Wiz_Name").Value)
+            If blnIssue = False Then
+                xlsWB.UpdateLinks = xlUpdateLinksNever
+                xlsWB.Sheets("CTQ").Select
+                intRC = 2
+                'Stop 'not fully tested
+                Do Until IsEmpty(xlsWB.ActiveSheet.Cells(intRC, 2).Value)
+                    strCMD = ""
+                    strCMD = "insert into ITIL_Wiz_CTQ (Wiz_ID, XLS_Row, CTQ_Desc, CTQ_Time) select "
+                    strCMD = strCMD & rstF.Fields("Wiz_ID").Value & ", "
+                    strCMD = strCMD & intRC - 1 & ", "
+                    strCMD = strCMD & Chr(34) & xlsWB.ActiveSheet.Cells(intRC, 1).Value & Chr(34) & ", "
+                    strCMD = strCMD & xlsWB.ActiveSheet.Cells(intRC, 2).Value
+                    CTQdb.Execute (strCMD)
+                    intRC = intRC + 1
+                Loop
+                xlsWB.Save
+                xlsWB.Close
+ '           fso.MoveFile "C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\" & rstF.Fields("Wiz_Name").Value, strSourcePath
+        End If
+        rstF.MoveNext
+    Wend
+End Sub

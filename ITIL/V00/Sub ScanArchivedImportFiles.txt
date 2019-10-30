@@ -1,0 +1,24 @@
+Sub ScanArchivedImportFiles()
+    Dim fc As Object
+    Dim fs As Object
+    Dim f1 As Object
+    Dim strCMD As String
+    Dim strFN As String
+    Dim f As Object
+    Debug.Print "Started " & Now()
+    Dim AFdb As DAO.Database
+    Set AFdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_ArchivedFileNamesTarget.accdb", 0)
+    Set fs = CreateObject("Scripting.filesystemobject")
+    strFN = "S:\AVBOM2\AVBOM2 Import Files\archive 2015"
+    Set f = fs.GetFolder(strFN)
+    Set fc = f.Files
+    For Each f1 In fc
+        strCMD = ""
+        strCMD = "insert into ITIL_ArchivedImportFilesTarget (FileName, FileTimeStamp) select "
+        strCMD = strCMD & Chr(34) & f1.Name & Chr(34)
+        strCMD = strCMD & ", " & Chr(34) & f1.DateCreated & Chr(34)
+        AFdb.Execute (strCMD)
+    Next
+    Debug.Print "Finished " & Now()
+    Debug.Print "Running a bat file with dir command takes less than 1 minute C:\Users\RROSE66\Documents\Archives\Requests\GetDirFromS.bat that outputs to Sdrive.txt"
+End Sub

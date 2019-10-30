@@ -1,0 +1,28 @@
+Sub CleanUpLocalArchivedFiles()
+    Dim fsoSource As Object 'source file name found on local drive
+    Dim fpoSource As Object 'Folder object
+    Dim fcoSource As Object 'File Collection Object
+    Dim fnoSource As Object 'File Name Object
+    Dim strFPsource As String
+    strFPsource = "C:\Users\RROSE66\Documents\Archives\Import_Files\Archive2015LanAndSP\"
+    Set fsoSource = CreateObject("Scripting.FileSystemObject")
+    Set fpoSource = fsoSource.GetFolder(strFPsource)
+    Set fcoSource = fpoSource.Files
+    
+    Dim strFPtarget As String
+    Dim fsoTarget As Object
+    Dim fpoTarget As Object
+    Dim fcoTarget As Object
+    Dim fnoTarget As Object
+    strFPtarget = "S:\AVBOM2\AVBOM2 Import Files\archive 2015\"
+    Set fsoTarget = CreateObject("Scripting.filesystemobject")
+    Set fpoTarget = fsoTarget.GetFolder(strFPtarget)
+    Set fcoTarget = fpoTarget.Files
+    For Each fnoSource In fcoSource
+        Debug.Print fnoSource.Name
+        If fsoTarget.FileExists(fnoSource.Name) Then
+             fsoSource.DeleteFile strFPsource & strWiz_Name
+        End If
+    Next fnoSource
+    
+End Sub

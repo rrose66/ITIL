@@ -1,0 +1,30 @@
+Sub GetListOfArchivedFilesV02()
+    Dim blnGotFile As Boolean
+    Dim lngLine As Long
+    Dim strCMD As String
+    Dim SourceFile As String
+    Dim strInput As String
+    Dim dbAFN As DAO.Database
+    Dim rstD As DAO.Recordset
+    CurrentDb.Execute ("Delete from ITIL_Import_Files")
+    lngLine = 1
+    blnGotFile = Shell("C:\Users\RROSE66\Documents\ITIL\GetSourceFiles.bat", vbNormalFocus)
+    Stop
+    Set rstD = CurrentDb.OpenRecordset("ITIL_Import_Files", dbOpenTable)
+    Open "C:\Users\RROSE66\Documents\ITIL\\SourceFiles.txt" For Input As #1
+    'Open SourceFile For Input As #1
+    Do While Not EOF(1)
+        Line Input #1, strInput
+        'Debug.Print strInput
+        If lngLine > 7 And Mid(strInput, 1, 10) <> "          " Then
+            strCMD = ""
+            strCMD = strCMD & "insert into ITIL_Import_Files (File_DT, File_Size, File_Name) select "
+            strCMD = strCMD & "#" & Mid(strInput, 1, 20) & "#"
+            strCMD = strCMD & ", " & CLng(Mid(strInput, 22, 17))
+            strCMD = strCMD & ", " & Chr(34) & Trim(Mid(strInput, 40, 200)) & Chr(34)
+            CurrentDb.Execute (strCMD)
+        End If
+        lngLine = lngLine + 1
+    Loop
+    Close #1
+End Sub

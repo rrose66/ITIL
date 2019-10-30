@@ -1,0 +1,271 @@
+Sub GetUALsV00()
+    blnDEV = False 'when true displays the file
+    Dim blnHistory As Boolean 'True when the shared drive files are used
+    blnHistory = False 'when true deletes the file from the local drive
+   ' On Error GoTo FileIssue
+    Dim UALdb As DAO.Database 'User Action Log
+    Dim ITILdb As DAO.Database 'User Action Log
+    Dim xlsApp As New Excel.Application
+    Dim xlsWB As New Excel.Workbook
+    Dim xlsWS As New Excel.Worksheet
+    Dim fso As Object 'File System Object
+    Dim rstQ As Recordset
+    Dim dtCurrent As Date
+    Dim dtLast As Date
+    Dim intCR As Integer
+    Dim intSR As Integer
+    Dim intSecondsLeft As Double
+    Dim lngDurSec As Long
+    Dim intFC As Double 'File Counter
+    Dim intLC As Integer 'Last Column
+    Dim intRC As Integer 'Record Counter
+    Dim strDays As String * 3
+    Dim strDur As String
+    Dim strWV As String * 8
+    Dim strHours As String * 2
+    Dim strMinutes As String * 2
+    Dim strSeconds As String * 2
+    Dim strTempDate As String
+    Dim rstSource As Recordset
+    Set UALdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_User_Action_Log.accdb", 0)
+    'Set ITILdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Data.accdb", 0)
+    'Set ITILdb = CurrentDb
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    'Set xlsApp = CreateObject("Excel.Application")
+    If blnDEV Then
+        xlsApp.Visible = True
+        'Stop
+    Else
+        xlsApp.Visible = False
+    End If
+    xlsApp.DisplayAlerts = False
+    '*************Get File names from dir
+    Set fso = CreateObject("scripting.filesystemobject")
+'    ITILdb.Execute ("delete from ITIL_WizUALsToGather")
+    strCMD = ""
+    strCMD = strCMD & "select * from WizUALstogather02"
+    'ITILdb.Execute (strCMD)
+    Set rstSource = CurrentDb.OpenRecordset(strCMD)
+    rstSource.MoveFirst
+    While Not rstSource.EOF
+        fso.CopyFile "S:\AVBOM2\AVBOM2 Import Files\archive 2015\" & rstSource.Fields("Wiz_Name").Value, "C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\"
+        Set xlsWB = xlsApp.Workbooks.Open("C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\" & rstSource.Fields(1).Value)
+'        Debug.Print rstSource.Fields(1).Value
+'        If Dir("C:\Users\RROSE66\Documents\Archives\Import_Files\Archive2015\" & rstSource.Fields(1).Value) <> "" Then
+            Set xlsWB = xlsApp.Workbooks.Open("C:\Users\RROSE66\Documents\Archives\Import_Files\Archive2015\" & rstSource.Fields(1).Value)
+            xlsWB.UpdateLinks = xlUpdateLinksNever
+            Set xlsWS = xlsWB.Worksheets("User Action Log")
+            intCR = 12
+    '        Do Until IsEmpty(xlsWS.Cells(intCR, 1).Value)
+                '******************************************WIP start
+                'Now load the User Action Log
+                'Call InventoryUserActionLogs
+                Set xlsWS = xlsWB.Worksheets("User Action Log")
+                xlsWS.Select
+                strWV = xlsWS.Cells(1, 1).Value
+                intER = 1
+                Do Until IsEmpty(xlsWS.Range("A" & intER, "A" & intER).Value)
+                    intER = intER + 1
+                Loop
+                intER = intER - 1
+                intUALRC = intER
+               'Format(dTime, "hh:mm:ss")
+                For intSR = 3 To intER
+                    'convert text to date
+                    '1 '11-Aug-15_11:29:08 AM
+                    '2 '21.Aug.2015_10:03:48
+                    '3 '07.Sep.2015_12:01:08 PM
+                    '4 '12.08.2015_11:29:05 ddmmyyyy done
+                    '5 '19.8.2015_10:46:28 ddmyyyy
+                    '6 '9.9.15_13:30:23
+                    '7 '10/8/2015_PM 4:55:09 ddmyyyy all these dates are not getting trapped here
+                    '8 '11/08/2015_02:36:09 p.m. ddmmyyyy done
+                    '            'target format is mmddyyyy hhmmss
+                    '
+                    '1 will always have 2 dashes
+                    '2 will always have 2 dots and 3 characters of text but no AM or PM
+                    '3 will always have 2 dots and 3 characters of text and AM or PM
+                    '
+                    'all date with no characters should first be reformatted as two digit month and day and 4 digit year
+                    'To determine month and day position of dates with 2 dots, reference the file timestamp
+                    'target format is mmddyyyy hhmmss
+                    If InStr(1, xlsWS.Range("A" & intSR).Value, "/") > 0 And InStr(1, xlsWS.Range("A" & intSR).Value, ".") = 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "_AM") = 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "_PM") = 0 Then
+                        dtCurrent = Replace(xlsWS.Range("A" & intSR).Value, "_", " ")
+                    'still need to develop
+        '            ElseIf (InStr(1, xlsWS.Range("A" & intSR).Value, "/") = 0 And InStr(1, xlsWS.Range("A" & intSR).Value, ".") = 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "_AM") > 0) Or (InStr(1, xlsWS.Range("A" & intSR).Value, "/") > 0 And InStr(1, xlsWS.Range("A" & intSR).Value, ".") = 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "_PM") > 0) Then
+        '            '10/8/2015_PM 4:55:09
+        '                strCMD = xlsWS.Range("A" & intSR).Value
+        '                strCMD = IIf(InStr(4, strCMD, "/") = 5, Mid(strCMD, 1, 3) & "0" & Mid(strCMD, 4, 20), strCMD)
+        '                strCMD = Replace(strCMD, "_", " ")
+        '                dtCurrent = IIf(InStr(xlsWS.Range("A" & intSR).Value, "_AM") > 0, Replace(Replace(xlsWS.Range("A" & intSR).Value, "_", " "), "_AM", ""), Replace(Replace(xlsWS.Range("A" & intSR).Value, "_", " "), "_PM", ""))
+                    ElseIf InStr(xlsWS.Range("A" & intSR).Value, "-") > 0 And IsNumeric(Mid(xlsWS.Range("A" & intSR).Value, 4, 1)) Then
+                        dtCurrent = Mid(xlsWS.Range("A" & intSR).Value, 6, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 9, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 4) & " " & Mid(xlsWS.Range("A" & intSR).Value, 12, 8)
+                    ElseIf InStr(xlsWS.Range("A" & intSR).Value, ".") > 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "/") > 0 Then
+                        '11/08/2015_02:36:09 p.m.
+                        dtCurrent = Replace(Replace(xlsWS.Range("A" & intSR).Value, "_", " "), ".", "")
+                    ElseIf InStr(xlsWS.Range("A" & intSR).Value, ".") > 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "/") = 0 Then
+                        '12.08.2015_11:29:05
+                        dtCurrent = Mid(xlsWS.Range("A" & intSR).Value, 4, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 7, 4) & " " & Mid(xlsWS.Range("A" & intSR).Value, 12, 8)
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Jan" Then
+                        dtCurrent = CDate("01/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Feb" Then
+                        dtCurrent = CDate("02/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Mar" Then
+                        dtCurrent = CDate("03/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Apr" Then
+                        dtCurrent = CDate("04/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "May" Then
+                        dtCurrent = CDate("05/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Jun" Then
+                        dtCurrent = CDate("06/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Jul" Then
+                        dtCurrent = CDate("07/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Aug" Then
+                        dtCurrent = CDate("08/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Sep" Then
+                        dtCurrent = CDate("09/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Oct" Then
+                        dtCurrent = CDate("10/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Nov" Then
+                        dtCurrent = CDate("11/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Dec" Then
+                        dtCurrent = CDate("12/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+                    Else
+                        dtCurrent = Mid(xlsWS.Range("A" & intSR).Value, 4, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 7, 4) & " " & Mid(xlsWS.Range("A" & intSR).Value, 12, 8)
+                    End If
+                    'calculate and format the duration
+                    'duration is based on days:hours:minutes:seconds
+                    'the initial calculation is in seconds
+                    'days is simply seconds \ (60 seconds in a minute * 60 minutes in a hour * 24 hours in a day) or 86400
+                    'hours minutes and seconds those units of time left over from each calculation
+                    If intSR = 3 Then
+                        'the first value will always be this since it takes two action log entries to calculate a duration
+                        strDur = "000:00:00:00"
+                    Else
+                        'Calculate the total seconds taken
+                        strDur = Abs(DateDiff("s", dtCurrent, dtLast))
+                        intSecondsLeft = strDur
+                        lngDurSec = strDur
+                        'Calculate the rounded days taken
+                        strDays = Round(intSecondsLeft / 86400)
+                        'now format the string with padded zeroes
+                        If strDays < 99 And strDays > 9 Then
+                            strDays = "0" & strDays
+                        ElseIf strDays < 10 Then
+                            strDays = "00" & Trim(strDays)
+                        End If
+                        intSecondsLeft = intSecondsLeft - (strDays * 86400)
+                        'convert left over seconds to hours
+                        strHours = Round(intSecondsLeft / (60 * 60))
+                        intSecondsLeft = intSecondsLeft - (strHours * 60 * 60)
+                        'now format the string with padded zeroes
+                        If strHours < 10 Then
+                            strHours = "0" & Trim(strHours)
+                        End If
+                        'convert remaining seconds to minutes left
+                        strMinutes = Abs(Round(intSecondsLeft / 60))
+                        If strMinutes < 10 Then
+                            strMinutes = "0" & Trim(strMinutes)
+                        Else
+                            strMinutes = Trim(strMinutes)
+                        End If
+                        'calculate seconds left
+                        intSecondsLeft = intSecondsLeft - (strMinutes * 60)
+                        strSeconds = Abs(intSecondsLeft)
+                        If strSeconds < 10 Then
+                            strSeconds = "0" & Trim(strSeconds)
+                        Else
+                            strSeconds = Trim(strSeconds)
+                        End If
+                        strDur = Trim(strDays) & ":" & Trim(strHours) & ":" & Trim(strMinutes) & ":" & Trim(strSeconds)
+                    End If
+                    'now apply the new data model
+                    'first find the ID
+                    'this will be the ID with a subject of CTQ Analaysis and no related request or incident or PBI or Rally Item
+                    'Stop 'not tested
+                    strCMD = ""
+                    strCMD = "insert into Wiz_User_Action_Log ("
+                    strCMD = strCMD & "XLS_Row, AI_Calc, AI_Done, Action, Location, Field_Value, Wiz_ID, AI_Duration, AI_Dur_Sec) "
+                    strCMD = strCMD & "select "
+                    strCMD = strCMD & intSR
+                    strCMD = strCMD & ", " & Chr(34) & dtLast & Chr(34)
+                    strCMD = strCMD & ", " & Chr(34) & xlsWS.Range("A" & intSR).Value & Chr(34)
+                    strCMD = strCMD & ", " & Chr(34) & xlsWS.Range("B" & intSR).Value & Chr(34)
+                    strCMD = strCMD & ", " & Chr(34) & xlsWS.Range("C" & intSR).Value & Chr(34)
+                    strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Range("D" & intSR).Value, Chr(34), "'") & Chr(34)
+                    strCMD = strCMD & ", " & rstSource.Fields(0).Value
+                    strCMD = strCMD & ", " & Chr(34) & strDur & Chr(34)
+                    strCMD = strCMD & ", " & lngDurSec
+                    'Stop
+                    UALdb.Execute (strCMD)
+                    dtLast = dtCurrent
+                Next intSR
+                '**********************************WIP end
+    '            strCMD = ""
+    '            strCMD = strCMD & "insert into Wiz_FD_Overall ("
+    '            strCMD = strCMD & "Wiz_ID, "
+    '            strCMD = strCMD & "Master_Row, "
+    '            strCMD = strCMD & "Prefix_Ford_Part, "
+    '            strCMD = strCMD & "Base_Ford_Part, "
+    '            strCMD = strCMD & "Suffix_Ford_Part, "
+    '            strCMD = strCMD & "Name_Ford_Part, "
+    '            strCMD = strCMD & "Lead_Program_Ford_Part, "
+    '            strCMD = strCMD & "Eff_In_Usage, "
+    '            strCMD = strCMD & "Eff_Out_Usage, "
+    '            strCMD = strCMD & "D_R_CDSID_Usage, "
+    '            strCMD = strCMD & "Usage_Certification_Usage "
+    '            strCMD = strCMD & ") select "
+    '            strCMD = strCMD & rstSource.Fields(3).Value
+    '            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 1).Value & Chr(34)
+    '            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 2).Value & Chr(34)
+    '            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 3).Value & Chr(34)
+    '            strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Cells(intCR, 4).Value, Chr(34), "'") & Chr(34)
+    '            strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Cells(intCR, 5).Value, Chr(34), "'") & Chr(34)
+    '            strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Cells(intCR, 7).Value, Chr(34), "'") & Chr(34)
+    '            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 19).Value & Chr(34)
+    '            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 20).Value & Chr(34)
+    '            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 25).Value & Chr(34)
+    '            strCMD = strCMD & ", " & Chr(34) & xlsWS.Cells(intCR, 186).Value & Chr(34)
+    '            CurrentDb.Execute (strCMD)
+                intCR = intCR + 1
+    '        Loop
+            'now normalize
+            'Stop 'not tested
+            strCMD = ""
+            strCMD = strCMD & "insert into Wiz_UALs (Wiz_ID) select " & rstSource.Fields(0).Value
+            CurrentDb.Execute (strCMD)
+            xlsWB.Close
+            'Archive2015
+            'fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\Archive2015\" & rstSource.Fields(1).Value
+            'fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\TargetUALs\" & rstSource.Fields(1).Value
+            'fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\Archive 2015\" & rstSource.Fields(1).Value
+            Set xlsWB = Nothing
+'        Else
+'            'Stop 'not tested
+'            strCMD = ""
+'            strCMD = strCMD & "update ITIL_Wiz_File_Names set issue = true where FileName = " & Chr(34) & rstSource.Fields(1).Value & Chr(34)
+'            CurrentDb.Execute (strCMD)
+'        End If
+        fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\" & rstSource.Fields("FileName").Value
+        'fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\Archive2015\" & rstSource.Fields("FileName").Value
+        rstSource.MoveNext
+    Wend
+'FileIssue:
+''    Stop 'not tested
+''    xlsApp.Visible = True
+''    Debug.Print rstSource.Fields(1).Value
+''    Debug.Print Err.Description
+''    Debug.Print Err.Number
+'''    Debug.Print Err.HelpContext
+'''    Debug.Print Err.HelpFile
+'''    Debug.Print Err.LastDllError
+''    Debug.Print Err.Source
+'    strCMD = ""
+'    strCMD = strCMD & "update ITIL_Wiz_File_Names set issue = true where FileName = " & Chr(34) & rstSource.Fields(1).Value & Chr(34)
+'    CurrentDb.Execute (strCMD)
+'    rstSource.MoveNext
+'    Set xlsWB = xlsApp.Workbooks.Open("C:\Users\RROSE66\Documents\Archives\Import_Files\Archive2015\" & rstSource.Fields(1).Value)
+''    xlsApp.Visible = False
+'    Resume Next
+End Sub

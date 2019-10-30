@@ -1,0 +1,33 @@
+Function GetWiz_ID(lngRequest As Long) As Long
+    'Dim dbITIL As DAO.Database
+    Dim rstTickets As DAO.Recordset
+    Dim rstWizID As DAO.Recordset
+    Dim rstQ As Recordset
+    'Set dbITIL = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Data.accdb", 0)
+    Set rstTickets = DataDb.OpenRecordset("ITIL_Tickets", dbOpenTable)
+    rstTickets.Index = "Request"
+    rstTickets.Seek "=", lngRequest
+    If rstTickets.NoMatch Then
+        strCMD = ""
+        strCMD = strCMD & "insert into ITIL_Tickets(Request) select " & lngRequest
+        dbITIL.Execute (strCMD)
+        'now find that insert and store the ticket autonumber for that request
+        Set rstQ = DataDb.OpenRecordset("select max(Ticket) from ITIL_Tickets")
+        lngTicket = rstQ.Fields(0).Value
+    Else
+        'request was found so store the ticket
+        lngTicket = rstTickets.Fields("Ticket").Value
+    End If
+    'now find the next recycleable wiz_id to store the ticket and wizard name and version combination
+    Set rstWizID = DataDb.OpenRecordset("select wiz_id from ITIL_Wiz_IDs")
+    'rstWizID = dbITIL.OpenRecordset("ITIL_Wiz_IDs", dbOpenTable)
+    GetWiz_ID = 0
+    rstWizID.Index = "PrimaryKey"
+    While Not rstWizID.EOF
+        GetWiz_ID = GetWiz_ID + 1
+        If rstWizID.Fields("Wiz_ID").Value <> GetWiz_ID Then
+            rstWizID.MoveLast
+        End If
+        rstWizID.MoveNext
+    Wend
+End Function

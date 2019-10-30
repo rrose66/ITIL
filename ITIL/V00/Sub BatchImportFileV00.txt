@@ -1,0 +1,12 @@
+Sub BatchImportFileV00()
+    'Manually Paste files from SharePoint and on weekends copy the archive
+'    strSourcePath = "C:\Users\RROSE66\Documents\Archives\Import_Files\Processed\"
+    Debug.Print "Pulling Archived files, adding SharePoint files, updating supporting tables, and getting new Wiz_ID"
+    Debug.Print Now()
+    Call GetNewWizIDsV01
+    Call GetWizInvV00
+    Debug.Print "Getting User Action Log data"
+    Debug.Print Now()
+    Call GetCTQsV00
+    Call GetUALsV01
+End Sub

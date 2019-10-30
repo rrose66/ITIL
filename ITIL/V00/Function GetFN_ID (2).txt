@@ -1,0 +1,23 @@
+Function GetFN_ID(strFileName As String) As Long
+    Dim rstFN As DAO.Recordset
+'    Dim DataDb As DAO.Database
+'    Set DataDb = DBEngine.OpenDatabase("C:\Users\rrose66\Documents\ITIL\ITIL_Data.accdb", 0)
+    Set rstFN = DataDb.OpenRecordset("ITIL_Wiz_File_Names", dbOpenTable)
+    rstFN.Index = "FileName"
+    rstFN.Seek "=", strFileName
+    If rstFN.NoMatch Then
+        Set rstQ = CurrentDb.OpenRecordset("Next_FN_ID")
+        strCMD = ""
+        strCMD = strCMD & "insert into ITIL_Wiz_File_Names (FileName, FN_ID, Issue, File_Validated) select"
+        strCMD = strCMD & Chr(34) & strFileName & Chr(34)
+        strCMD = strCMD & ", " & rstQ.Fields(0).Value
+        strCMD = strCMD & ", " & False
+        strCMD = strCMD & ", " & True
+        CurrentDb.Execute (strCMD)
+        GetFN_ID = rstQ.Fields(0).Value
+        rstQ.Close
+        Set rstQ = Nothing
+    Else
+        GetFN_ID = rstFN.Fields("FN_ID").Value
+    End If
+End Function

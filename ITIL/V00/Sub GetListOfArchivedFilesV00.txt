@@ -1,0 +1,54 @@
+Sub GetListOfArchivedFilesV00()
+    Dim blnGotFile As Boolean
+    Dim lngLine As Long
+    Dim strCMD As String
+    Dim SourceFile As String
+    Dim strInput As String
+    Dim dbAFN As DAO.Database
+    Set dbAFN = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\CurrentFiles.accdb", 0)
+
+    dbAFN.Execute ("Delete from Current_Files")
+    lngLine = 1
+    Stop
+    blnGotFile = Shell("C:\Users\RROSE66\Documents\Archives\Requests\getdirfroms.bat", vbNormalFocus)
+    Stop
+    Open "C:\Users\RROSE66\Documents\Archives\Requests\Sdrive.txt" For Input As #1
+    'Open SourceFile For Input As #1
+    Do While Not EOF(1)
+        Line Input #1, strInput
+        'Debug.Print strInput
+        If lngLine > 7 And Mid(strInput, 1, 10) <> "          " Then
+            strCMD = ""
+            strCMD = strCMD & "insert into Current_Files (File_DT, File_Size, File_Name) select "
+            strCMD = strCMD & "#" & Mid(strInput, 1, 20) & "#"
+            strCMD = strCMD & ", " & CLng(Mid(strInput, 22, 17))
+            strCMD = strCMD & ", " & Chr(34) & Trim(Mid(strInput, 40, 200)) & Chr(34)
+            dbAFN.Execute (strCMD)
+        End If
+        lngLine = lngLine + 1
+    Loop
+    Close #1
+    dbAFN.Close
+    
+    
+    lngLine = 1
+    Set dbAFN = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Local_ArchivedFiles.accdb", 0)
+    dbAFN.Execute ("Delete from All_Archived_Files")
+    Open "C:\Users\RROSE66\Documents\Archives\Requests\Ldrive.txt" For Input As #1
+    'Open SourceFile For Input As #1
+    Do While Not EOF(1)
+        Line Input #1, strInput
+        'Debug.Print strInput
+        If lngLine > 7 And Mid(strInput, 1, 10) <> "          " Then
+            strCMD = ""
+            strCMD = strCMD & "insert into All_Archived_Files (File_DT, File_Size, File_Name) select "
+            strCMD = strCMD & "#" & Mid(strInput, 1, 20) & "#"
+            strCMD = strCMD & ", " & CLng(Mid(strInput, 22, 17))
+            strCMD = strCMD & ", " & Chr(34) & Trim(Mid(strInput, 40, 200)) & Chr(34)
+            dbAFN.Execute (strCMD)
+        End If
+        lngLine = lngLine + 1
+    Loop
+    Close #1
+    
+End Sub

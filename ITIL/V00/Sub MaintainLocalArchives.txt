@@ -1,0 +1,36 @@
+Sub MaintainLocalArchives()
+    Dim fsoSource As Object 'source file name found on local drive
+    Dim fpoSource As Object 'Folder object
+    Dim fcoSource As Object 'File Collection Object
+    Dim fnoSource As Object 'File Name Object
+    Dim strFPsource As String
+    strFPsource = "S:\AVBOM2\AVBOM2 Import Files\archive 2015\"
+    Set fsoSource = CreateObject("Scripting.FileSystemObject")
+    Set fpoSource = fsoSource.GetFolder(strFPsource)
+    Set fcoSource = fpoSource.Files
+    
+    Dim strFPtarget As String
+    Dim fsoTarget As Object
+    Dim fpoTarget As Object
+    Dim fcoTarget As Object
+    Dim fnoTarget As Object
+    strFPtarget = "C:\Users\RROSE66\Documents\Archives\Import_Files\Archive2015\"
+    
+    Dim fso As Object
+    Set fsoSource = CreateObject("Scripting.FileSystemObject")
+    strCMD = strFPtarget & "AVBOM2_Import_aalmei28_060315_13.29.xls"
+    Set fsoTarget = CreateObject("Scripting.filesystemobject")
+    Set fpoTarget = fsoTarget.GetFolder(strFPtarget)
+    Set fcoTarget = fpoTarget.Files
+'    If fsoTarget.FileExists(strCMD) Then
+'        Debug.Print strCMD
+'    End If
+    For Each fnoSource In fcoSource
+        'Debug.Print fnoSource.Name
+        strCMD = strFPtarget & fnoSource.Name
+        If Not fsoTarget.FileExists(strCMD) Then
+             fsoSource.CopyFile strFPsource & fnoSource.Name, strFPtarget
+        End If
+    Next fnoSource
+    
+End Sub

@@ -1,0 +1,21 @@
+Sub LocalFileCleanUpV00()
+    Dim rstQ As DAO.Recordset
+    Dim fso As Object 'File System Object
+    Dim f1 As Object
+    Dim fs As Object
+    Dim f As Object
+    Dim fc As Object
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set fs = CreateObject("Scripting.filesystemobject")
+    Set f = fs.GetFolder("C:\Users\RROSE66\Documents\Archives\Import_Files\Source\")
+    Set fc = f.Files
+    Set rstQ = CurrentDb.OpenRecordset("ITIL_Wiz_File_Names", dbOpenTable)
+    rstQ.Index = "FileName"
+    For Each f1 In fc
+        'If file is in db then delete it from Source
+        rstQ.Seek "=", f1.Name
+        If Not rstQ.NoMatch Then
+            fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\Source\" & f1.Name
+        End If
+    Next f1
+End Sub

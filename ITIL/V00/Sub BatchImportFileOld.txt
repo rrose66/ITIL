@@ -1,0 +1,794 @@
+Sub BatchImportFileOld()
+    blnDEV = True 'when true displays the file
+    Dim blnHistory As Boolean 'True when the shared drive files are used
+    blnHistory = False 'when true deletes the file from the local drive
+    Dim intFiles As Double
+    intFiles = 5
+'        On Error GoTo errHandler
+'*****************************************************
+'populate all support tables
+'then populate all tables creating autonumbers
+'if using a query then put it into recordset to add one record at a time or add key field to query
+'insert new log entries to existing tickets
+'docmd.OpenQuery("NewNotesForExistingTickets") 'will not run because thr RR_INC note field is memo type
+'
+'High Level Process
+'Manually copy files
+'Delete files that have been processed already
+'Loop through each file then move it to processed
+'Get Wiz_Ver_ID
+'Add to ITIL_Wiz_UAL_Report
+'Add to ITIL_Inv_WS
+'Add to ITIL_Wiz_Tables
+'Add to Wiz_End_Items
+'Add to ITIL_Wiz_Tables
+'*****************************************************
+    Dim ITILdb As DAO.Database
+    Dim ITIL_PI As DAO.Database 'Process Imports
+    Dim ITIL_Inv_WS_db As DAO.Database
+    Dim ITIL_TabsAndTitles As DAO.Database
+    Dim FDdb As DAO.Database 'FD Overall
+    Dim EIdb As DAO.Database 'End Items
+    Dim IDdb As DAO.Database 'ID Overall
+    Dim UALdb As DAO.Database 'User Action Log
+    Dim WEdb As DAO.Database 'Wizard Entities
+    Dim xlsApp As New Excel.Application
+    Dim xlsWB As New Excel.Workbook
+    Dim xlsWS As New Excel.Worksheet
+    Dim fso As Object 'File System Object
+    Dim fsoT As Object 'File System Object for Target
+    Dim fpo As Object 'File Path Object
+    Dim fpot As Object
+    Dim fco As Object 'File Collection Object
+    Dim fcot As Object
+    Dim fno As Object 'File Name Object
+    Dim fnot As Object
+    Dim rstQ As Recordset
+    Dim rstW As DAO.Recordset
+    Dim intSecondsLeft As Double
+    Dim intFC As Double 'File Counter
+    Dim intLC As Integer 'Last Column
+    Dim intRC As Integer 'Record Counter
+    Dim intSR As Integer
+    Dim intWS As Integer
+    Dim qdf As DAO.QueryDef
+    Dim strDays As String * 3
+    Dim strDur As String
+    Dim strFP As String 'File Path
+    Dim strFPS As String 'File Path Source
+    Dim strHours As String * 2
+    Dim strMinutes As String * 2
+    Dim strSeconds As String * 2
+    Dim strTempDate As String
+    Dim strWV As String * 8
+    Dim dtCurrent As Date
+    Dim dtLast As Date
+    Set ITIL_PI = CurrentDb
+    Set ITILdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Data.accdb", 0)
+    Set ITIL_Inv_WS_db = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Inv_WS.accdb", 0)
+    Set ITIL_TabsAndTitles = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Wiz_TabsAndTitles.accdb", 0)
+    Set FDdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_FD_Overall.accdb", 0)
+    Set EIdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_End_Items.accdb", 0)
+    Set IDdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_ID_Overall.accdb", 0)
+    Set UALdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_User_Action_Log.accdb", 0)
+    Set WEdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_Entities.accdb", 0)
+    '**************Connect to Excel
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    Set xlsApp = CreateObject("Excel.Application")
+    If blnDEV Then
+        xlsApp.Visible = True
+        'Stop
+    Else
+        xlsApp.Visible = False
+    End If
+    xlsApp.DisplayAlerts = False
+    '*************Get File names from dir
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set fsoT = CreateObject("scripting.filesystemobject")
+    strFPS = "https://dept.sp.ford.com/sites/avbomus/Shared Documents/Import Files - PDBOM/*.*"
+    strFP = "C:\Users\RROSE66\Documents\Archives\Import_Files\*.*"
+    'Copy files from SharePoint to local drive
+'Stop '*************************************************************WIP
+    'copyfile is not working due to error 52 a bad name
+'    strWiz_Name = Dir(strFPS)
+'    FSO.CopyFile Mid(strFPS, 1, Len(strFPS) - 3) & strWiz_Name, Mid(strFP, 1, Len(strFP) - 3) & strWiz_Name
+'    Do Until Dir() = ""
+'        strWiz_Name = Dir()
+'        rstW.Seek "=", strWiz_Name
+'        If Not rstW.NoMatch Then
+'            FSO.DeleteFile Mid(strFP, 1, Len(strFP) - 3) & strWiz_Name
+'        Else
+'            intFiles = intFiles + 1
+'        End If
+'    Loop
+'
+'    FSO.CopyFile "https://dept.sp.ford.com/sites/avbomus/Shared Documents/Import Files - PDBOM/*.*", Mid(strFP, 1, Len(strFP) - 3)
+
+'*************************************************************End of WIP
+'works but ends in an error
+    
+    intFiles = 1
+    strWiz_Name = Dir(strFP)
+    Set ITILdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Data.accdb")
+    Set rstW = ITILdb.OpenRecordset("ITIL_Wiz_UAL_Report", dbOpenTable)
+    rstW.Index = "Wiz_Name"
+    rstW.Seek "=", strWiz_Name
+    If Not rstW.NoMatch Then
+        fso.DeleteFile Mid(strFP, 1, Len(strFP) - 3) & strWiz_Name
+    Else
+        intFiles = intFiles + 1
+    End If
+    
+   Set fpot = fsoT.GetFolder("C:\Users\RROSE66\Documents\Archives\Import_Files\Processed")
+   Set fcot = fpot.Files
+'    Dim fso, f, f1, fc, s
+   Set fso = CreateObject("Scripting.FileSystemObject")
+   'get the folder by giving its path
+   Set fpo = fso.GetFolder(Mid(strFP, 1, Len(strFP) - 3))
+   Set fco = fpo.Files
+   For Each fno In fco
+      strWiz_Name = fno.Name
+        rstW.Seek "=", strWiz_Name
+        If Not rstW.NoMatch Then
+            fso.DeleteFile Mid(strFP, 1, Len(strFP) - 3) & strWiz_Name
+            'Stop 'add code to delete fso file if found in processed folder
+        Else
+            intFiles = intFiles + 1
+        End If
+   Next
+    strWiz_Name = Dir(strFP)
+    For intFC = 1 To intFiles - 2
+        Set xlsWB = xlsApp.Workbooks.Open("C:\Users\RROSE66\Documents\Archives\Import_Files\" & strWiz_Name)
+        'setup control variables
+        strWiz_Name = xlsWB.Name
+        xlsWB.UpdateLinks = xlUpdateLinksNever
+        xlsWB.Save
+        intTicket = 60
+        strWiz_Version = Trim(xlsWB.Worksheets("User Action Log").Cells(1, 1).Value)
+        strCMD = ""
+        strCMD = strCMD & "select count(*) from itil_vba_versions where "
+        strCMD = strCMD & "Wiz_Version = " & Chr(34) & strWiz_Version & Chr(34)
+        strCMD = strCMD & " and Wiz_Env = " & Chr(34) & "P" & Chr(34)
+        Set rstQ = ITILdb.OpenRecordset(strCMD)
+        If rstQ.Fields(0).Value > 0 Then
+            rstQ.Close
+            Set rstQ = Nothing
+            strCMD = ""
+            strCMD = strCMD & "select wiz_Ver_id from itil_vba_versions where "
+            strCMD = strCMD & "Wiz_Version = " & Chr(34) & strWiz_Version & Chr(34)
+            strCMD = strCMD & " and Wiz_Env = " & Chr(34) & "P" & Chr(34)
+            Set rstQ = ITILdb.OpenRecordset(strCMD)
+            intWiz_Ver_ID = rstQ.Fields(0).Value
+            rstQ.Close
+            Set rstQ = Nothing
+        Else
+            ITILdb.Execute ("update ITIL_Counters set Wiz_Ver_ID = Wiz_Ver_ID+1")
+            Set rstQ = ITILdb.OpenRecordset("ITIL_Counters", dbOpenTable)
+            intWiz_Ver_ID = rstQ.Fields("Wiz_Ver_ID").Value
+            rstQ.Close
+            Set rstQ = Nothing
+            strCMD = ""
+            strCMD = strCMD & "insert into ITIL_VBA_Versions(Wiz_Ver_ID, Wiz_Version, Wiz_Env, DateTimeStamp) select "
+            strCMD = strCMD & intWiz_Ver_ID & ", "
+            strCMD = strCMD & Chr(34) & strWiz_Version & Chr(34) & ", "
+            strCMD = strCMD & Chr(34) & "P" & Chr(34) & ", "
+            strCMD = strCMD & Chr(34) & Now() & Chr(34)
+            ITILdb.Execute (strCMD)
+            '*************************************************************End of WIP
+
+        End If
+        'add record to UAL report for all supporting files to be related to
+        'now load the control variables into the ITIL_Wiz_UAL_Report
+        ITILdb.Execute ("update ITIL_Counters set Wiz_ID = Wiz_ID+1")
+        Set rstQ = ITILdb.OpenRecordset("ITIL_Counters", dbOpenTable)
+        intWiz_ID = rstQ.Fields("Wiz_ID").Value
+        'use this table to manage which tabs exists
+        For intWS = 1 To xlsWB.Worksheets.Count
+            If xlsWB.Worksheets(intWS).Name = "PDB LOV" Then
+                'Stop
+            End If
+            strCMD = "insert into ITIL_Inv_WS (Wiz_ID, WorkSheet_Name) select "
+            strCMD = strCMD & intWiz_ID
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.Worksheets(intWS).Name & Chr(34)
+            ITIL_Inv_WS_db.Execute (strCMD)
+        Next intWS
+       'there are cases where this worksheet does not exist but the CID does
+        strCMD = ""
+        strCMD = strCMD & "select count(*) from itil_inv_ws where WorkSheet_Name = " & Chr(34) & "ID-Overall" & Chr(34) & " and Wiz_ID = " & intWiz_ID
+        Set rstQ = ITIL_Inv_WS_db.OpenRecordset(strCMD)
+        If rstQ.Fields(0).Value > 0 Then
+            dtIssued = xlsWB.Worksheets("ID-Overall").Cells(1, 5).Value
+            If Not IsEmpty(xlsWB.Worksheets("ID-Overall").Cells(2, 13).Value) Then
+                'this is the last XML that was submitted
+                'stop
+            End If
+        Else
+            strCMD = ""
+            strCMD = strCMD & "select count(*) from itil_inv_ws where WorkSheet_Name = "
+            strCMD = strCMD & Chr(34) & "CID" & Chr(34) & " and Wiz_ID = " & intWiz_ID
+            Set rstQ = ITIL_Inv_WS_db.OpenRecordset(strCMD)
+            If rstQ.Fields(0).Value > 0 Then
+                dtIssued = xlsWB.Worksheets("CID").Cells(1, 6).Value
+            Else
+                dtIssued = Replace(xlsWB.Worksheets("User Action Log").Cells(3, 1).Value, "_", " ")
+            End If
+            'obtaining error when date is formatted as
+            '24.06.2015_14:02:31
+            '28/07/2015_01:02:44 p.m.
+        End If
+        strCMD = ""
+        strCMD = strCMD & "insert into ITIL_Wiz_UAL_Report ("
+        strCMD = strCMD & "Wiz_ID, Ticket, Wiz_Ver_ID, Wiz_name, Issued_Date) select "
+        strCMD = strCMD & intWiz_ID & ", "
+        strCMD = strCMD & intTicket
+        strCMD = strCMD & ", " & intWiz_Ver_ID
+        strCMD = strCMD & ", " & Chr(34) & strWiz_Name & Chr(34)
+        strCMD = strCMD & ", " & Chr(34) & dtIssued & Chr(34)
+        ITILdb.Execute (strCMD)
+'        Call GetNewIntWiz_ID
+        strCMD = ""
+        strCMD = "select max(wiz_id) from ITIL_Wiz_UAL_Report"
+        Set rstQ = ITILdb.OpenRecordset(strCMD)
+        intWiz_ID = rstQ.Fields(0).Value
+        rstQ.Close
+        Set rstQ = Nothing
+        Set xlsWS = xlsWB.Worksheets("User Action Log")
+        xlsWS.Select
+        strCDSID = Mid(xlsWS.Cells(3, 4).Value, 8, 8)
+        Set xlsWS = Nothing
+        'Call PopEI 'Populate End Items if that sheet exists
+        strCMD = ""
+        strCMD = strCMD & "select count(*) from itil_inv_ws where "
+        strCMD = strCMD & " wiz_ID = " & intWiz_ID
+        strCMD = strCMD & " and worksheet_name = " & Chr(34) & "End Items" & Chr(34)
+        Set rstQ = ITIL_Inv_WS_db.OpenRecordset(strCMD)
+        If rstQ.Fields(0).Value > 0 Then
+            rstQ.Close
+            Set rstQ = Nothing
+            Set xlsWS = xlsWB.Worksheets("End Items")
+            xlsWS.Select
+            'Call GetEIEC
+            intEIEC = 3
+            Do Until IsEmpty(xlsWS.Range("D" & intEIEC, "D" & intEIEC).Value)
+                intEIEC = intEIEC + 1
+            Loop
+            intEIEC = intEIEC - 3
+            'Add records to the ITIL_Wiz_Tables
+            'Scan all ranges and titles
+            intLC = 1
+            Do Until IsEmpty(xlsWS.Cells(2, intLC).Value)
+                'first find out if the current Range_Name is in itil_wiz_ranges
+                'if it is not in there, add it
+                'in either case get the wiz_range_id
+                strCMD = ""
+                strCMD = strCMD & "select count(*) from ITIL_Wiz_Ranges where Range_Name = " & Chr(34) & xlsWS.Name & Chr(34)
+                Set rstQ = ITILdb.OpenRecordset(strCMD)
+                If rstQ.Fields(0).Value > 0 Then
+                    'range_Name exists
+                    strCMD = ""
+                    strCMD = strCMD & "select Wiz_Range_ID from ITIL_Wiz_Ranges where Range_Name = " & Chr(34) & xlsWS.Name & Chr(34)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Range_ID = rstQ.Fields(0).Value
+                Else
+                    'range_Name is new
+                    'Get new Wiz_Range_ID from ITIL_Counters
+                    'stop
+                    strCMD = ""
+                    strCMD = strCMD & "update ITIL_Counters set Wiz_Range_ID = Wiz_Range_ID + 1"
+                    ITILdb.Execute (strCMD)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    strCMD = "select Wiz_Range_ID from ITIL_Counters"
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Range_ID = rstQ.Fields(0).Value
+                    strCMD = "insert into ITIL_Wiz_Ranges (Wiz_Range_ID, Range_Name) select " & intWiz_Range_ID & ", " & Chr(34) & xlsWS.Name & Chr(34)
+                    ITILdb.Execute (strCMD)
+                End If
+                'next find out if the current Field_Title is in itil_wiz_Titles
+                'if it is not in there, add it
+                'in either case get the wiz_title_id
+                strCMD = ""
+                strCMD = strCMD & "select count(*) from ITIL_Wiz_Titles where Field_Title = " & Chr(34) & xlsWS.Cells(2, intLC).Value & Chr(34)
+                Set rstQ = ITILdb.OpenRecordset(strCMD)
+                If rstQ.Fields(0).Value > 0 Then
+                    'range_Name exists
+                    strCMD = ""
+                    strCMD = strCMD & "select Wiz_Title_ID from ITIL_Wiz_Titles where Field_Title = " & Chr(34) & xlsWS.Cells(2, intLC).Value & Chr(34)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Title_ID = rstQ.Fields(0).Value
+                Else
+                    'range_Name is new
+                    'Get new Wiz_Range_ID from ITIL_Counters
+                    'Stop
+                    strCMD = ""
+                    strCMD = strCMD & "update ITIL_Counters set Wiz_Title_ID = Wiz_Title_ID + 1"
+                    ITILdb.Execute (strCMD)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    strCMD = "select Wiz_Title_ID from ITIL_Counters"
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Title_ID = rstQ.Fields(0).Value
+                    strCMD = "insert into ITIL_Wiz_Titles (Wiz_Title_ID, Field_Title) select " & intWiz_Title_ID & ", " & Chr(34) & xlsWS.Cells(2, intLC).Value & Chr(34)
+                    ITILdb.Execute (strCMD)
+                End If
+                strCMD = ""
+                strCMD = "insert into ITIL_Wiz_Tables (Wiz_ID, Field_Order, Wiz_Range_ID, Wiz_Title_ID) select "
+                strCMD = strCMD & intWiz_ID
+                strCMD = strCMD & ", " & intLC
+                strCMD = strCMD & ", " & intWiz_Range_ID
+                strCMD = strCMD & ", " & intWiz_Title_ID
+                ITIL_TabsAndTitles.Execute (strCMD)
+                intLC = intLC + 1
+            Loop
+            'now create a recordset of the field names to be populated in order
+            'only populate those field
+            strCMD = ""
+            strCMD = strCMD & "update ITIL_Counters set "
+            strCMD = strCMD & "intWiz_ID = " & intWiz_ID
+            strCMD = strCMD & ", strRange_Name = " & Chr(34) & xlsWS.Name & Chr(34)
+            ITILdb.Execute (strCMD)
+            strITIL_Table = xlsWS.Name
+            rstQ.Close
+            Set rstQ = Nothing
+            'Set rstq = ITIL_PI.OpenRecordset("TaFfCW") 'Tables and Fields for Current Wizard
+            For intRC = 1 To intEIEC
+                strCMD = ""
+                strCMD = strCMD & "insert into Wiz_End_Items (Wiz_ID, "
+                rstQ.MoveFirst
+                While Not rstQ.EOF
+                    strCMD = strCMD & rstQ.Fields("ITIL_Field_Name").Value & ", "
+                    rstQ.MoveNext
+                Wend
+                strCMD = Mid(strCMD, 1, Len(strCMD) - 2)
+                strCMD = strCMD & ") select "
+                strCMD = strCMD & intWiz_ID
+                rstQ.MoveFirst
+                While Not rstQ.EOF
+                    strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Cells(intRC + 2, rstQ.Fields("Field_order").Value).Value, Chr(34), "'") & Chr(34)
+                    rstQ.MoveNext
+                Wend
+                EIdb.Execute (strCMD)
+            Next intRC
+        Else
+            intEIEC = 0
+        End If
+'        Stop 'need to add the ID-Overall tab
+        'first check to see if this tab exists
+        'if it exists, store all titles
+        strCMD = ""
+        strCMD = strCMD & "select count(*) from itil_inv_ws where "
+        strCMD = strCMD & " wiz_ID = " & intWiz_ID
+        strCMD = strCMD & " and worksheet_name = " & Chr(34) & "ID-Overall" & Chr(34)
+        Set rstQ = ITIL_Inv_WS_db.OpenRecordset(strCMD)
+        If rstQ.Fields(0).Value > 0 Then
+            rstQ.Close
+            Set rstQ = Nothing
+            Set xlsWS = xlsWB.Worksheets("ID-Overall")
+            xlsWS.Select
+            'Call GetEIEC
+            intEIEC = 12
+            Do Until IsEmpty(xlsWS.Range("A" & intEIEC, "A" & intEIEC).Value)
+                intEIEC = intEIEC + 1
+            Loop
+            intEIEC = intEIEC - 12
+            'Add records to the ITIL_Wiz_Tables
+            intLC = 1
+            Do Until IsEmpty(xlsWS.Cells(5, intLC).Value)
+                'first find out if the current Range_Name is in itil_wiz_ranges
+                'if it is not in there, add it
+                'in either case get the wiz_range_id
+                strCMD = ""
+                strCMD = strCMD & "select count(*) from ITIL_Wiz_Ranges where Range_Name = " & Chr(34) & xlsWS.Name & Chr(34)
+                Set rstQ = ITILdb.OpenRecordset(strCMD)
+                If rstQ.Fields(0).Value > 0 Then
+                    'range_Name exists
+                    strCMD = ""
+                    strCMD = strCMD & "select Wiz_Range_ID from ITIL_Wiz_Ranges where Range_Name = " & Chr(34) & xlsWS.Name & Chr(34)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Range_ID = rstQ.Fields(0).Value
+                Else
+                    'range_Name is new
+                    'Get new Wiz_Range_ID from ITIL_Counters
+                    'stop
+                    strCMD = ""
+                    strCMD = strCMD & "update ITIL_Counters set Wiz_Range_ID = Wiz_Range_ID + 1"
+                    ITILdb.Execute (strCMD)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    strCMD = "select Wiz_Range_ID from ITIL_Counters"
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Range_ID = rstQ.Fields(0).Value
+                    strCMD = "insert into ITIL_Wiz_Ranges (Wiz_Range_ID, Range_Name) select " & intWiz_Range_ID & ", " & Chr(34) & xlsWS.Name & Chr(34)
+                    ITILdb.Execute (strCMD)
+                End If
+                'next find out if the current Field_Title is in itil_wiz_Titles
+                'if it is not in there, add it
+                'in either case get the wiz_title_id
+                strCMD = ""
+                strCMD = strCMD & "select count(*) from ITIL_Wiz_Titles where Field_Title = " & Chr(34) & xlsWS.Cells(5, intLC).Value & Chr(34)
+                Set rstQ = ITILdb.OpenRecordset(strCMD)
+                If rstQ.Fields(0).Value > 0 Then
+                    'range_Name exists
+                    strCMD = ""
+                    strCMD = strCMD & "select Wiz_Title_ID from ITIL_Wiz_Titles where Field_Title = " & Chr(34) & xlsWS.Cells(5, intLC).Value & Chr(34)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Title_ID = rstQ.Fields(0).Value
+                Else
+                    'range_Name is new
+                    'Get new Wiz_Range_ID from ITIL_Counters
+                    'stop
+                    strCMD = ""
+                    strCMD = strCMD & "update ITIL_Counters set Wiz_Title_ID = Wiz_Title_ID + 1"
+                    ITILdb.Execute (strCMD)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    strCMD = "select Wiz_Title_ID from ITIL_Counters"
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Title_ID = rstQ.Fields(0).Value
+                    strCMD = "insert into ITIL_Wiz_Titles (Wiz_Title_ID, Field_Title) select " & intWiz_Title_ID & ", " & Chr(34) & xlsWS.Cells(5, intLC).Value & Chr(34)
+                    ITILdb.Execute (strCMD)
+                End If
+                
+                strCMD = ""
+                strCMD = "insert into ITIL_Wiz_Tables (Wiz_ID, Field_Order, Wiz_Range_ID, Wiz_Title_ID) select "
+                strCMD = strCMD & intWiz_ID
+                strCMD = strCMD & ", " & intLC
+                strCMD = strCMD & ", " & intWiz_Range_ID
+                strCMD = strCMD & ", " & intWiz_Title_ID
+                ITIL_TabsAndTitles.Execute (strCMD)
+                intLC = intLC + 1
+            Loop
+            'now create a recordset of the field names to be populated in order
+            'only populate those field
+            strCMD = ""
+            strCMD = strCMD & "update ITIL_Counters set "
+            strCMD = strCMD & "intWiz_ID = " & intWiz_ID
+            strCMD = strCMD & ", strRange_Name = " & Chr(34) & xlsWS.Name & Chr(34)
+            ITILdb.Execute (strCMD)
+            strITIL_Table = xlsWS.Name
+            rstQ.Close
+            Set rstQ = Nothing
+            'Set rstq = ITIL_PI.OpenRecordset("TaFfCW") 'Tables and Fields for Current Wizard
+            For intRC = 1 To intEIEC
+                strCMD = ""
+                strCMD = strCMD & "insert into Wiz_ID_Overall (Wiz_ID,"
+                rstQ.MoveFirst
+                While Not rstQ.EOF
+                    strCMD = strCMD & "[" & rstQ.Fields("ITIL_Field_Name").Value & "]" & ", "
+                    rstQ.MoveNext
+                Wend
+                strCMD = Mid(strCMD, 1, Len(strCMD) - 2)
+                strCMD = strCMD & ") select "
+                strCMD = strCMD & intWiz_ID
+                rstQ.MoveFirst
+                While Not rstQ.EOF
+                    strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Cells(intRC + 9, rstQ.Fields("Field_order").Value).Value, Chr(34), "'") & Chr(34)
+                    rstQ.MoveNext
+                Wend
+                IDdb.Execute (strCMD)
+            Next intRC
+        End If
+        'first check to see if this tab exists
+        'if it exists, store all titles
+        strCMD = ""
+        strCMD = strCMD & "select count(*) from itil_inv_ws where "
+        strCMD = strCMD & " wiz_ID = " & intWiz_ID
+        strCMD = strCMD & " and worksheet_name = " & Chr(34) & "FD-Overall" & Chr(34)
+        Set rstQ = ITIL_Inv_WS_db.OpenRecordset(strCMD)
+        If rstQ.Fields(0).Value > 0 Then
+            rstQ.Close
+            Set rstQ = Nothing
+            Set xlsWS = xlsWB.Worksheets("FD-Overall")
+            xlsWS.Select
+            'Call GetEIEC
+            intEIEC = 12
+            Do Until IsEmpty(xlsWS.Range("A" & intEIEC, "A" & intEIEC).Value)
+                intEIEC = intEIEC + 1
+            Loop
+            intEIEC = intEIEC - 12
+'            Stop 'now start adding records
+'            Stop 'having an issue where the field location is dynamic
+            'Add records to the ITIL_Wiz_Tables
+            intLC = 1
+            Do Until IsEmpty(xlsWS.Cells(5, intLC).Value)
+                'first find out if the current Range_Name is in itil_wiz_ranges
+                'if it is not in there, add it
+                'in either case get the wiz_range_id
+                strCMD = ""
+                strCMD = strCMD & "select count(*) from ITIL_Wiz_Ranges where Range_Name = " & Chr(34) & xlsWS.Name & Chr(34)
+                Set rstQ = ITILdb.OpenRecordset(strCMD)
+                If rstQ.Fields(0).Value > 0 Then
+                    'range_Name exists
+                    strCMD = ""
+                    strCMD = strCMD & "select Wiz_Range_ID from ITIL_Wiz_Ranges where Range_Name = " & Chr(34) & xlsWS.Name & Chr(34)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Range_ID = rstQ.Fields(0).Value
+                Else
+                    'range_Name is new
+                    'Get new Wiz_Range_ID from ITIL_Counters
+                    'stop
+                    strCMD = ""
+                    strCMD = strCMD & "update ITIL_Counters set Wiz_Range_ID = Wiz_Range_ID + 1"
+                    ITILdb.Execute (strCMD)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    strCMD = "select Wiz_Range_ID from ITIL_Counters"
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Range_ID = rstQ.Fields(0).Value
+                    strCMD = "insert into ITIL_Wiz_Ranges (Wiz_Range_ID, Range_Name) select " & intWiz_Range_ID & ", " & Chr(34) & xlsWS.Name & Chr(34)
+                    ITILdb.Execute (strCMD)
+                End If
+                'next find out if the current Field_Title is in itil_wiz_Titles
+                'if it is not in there, add it
+                'in either case get the wiz_title_id
+                strCMD = ""
+                strCMD = strCMD & "select count(*) from ITIL_Wiz_Titles where Field_Title = " & Chr(34) & xlsWS.Cells(5, intLC).Value & Chr(34)
+                Set rstQ = ITILdb.OpenRecordset(strCMD)
+                If rstQ.Fields(0).Value > 0 Then
+                    'range_Name exists
+                    strCMD = ""
+                    strCMD = strCMD & "select Wiz_Title_ID from ITIL_Wiz_Titles where Field_Title = " & Chr(34) & xlsWS.Cells(5, intLC).Value & Chr(34)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Title_ID = rstQ.Fields(0).Value
+                Else
+                    'range_Name is new
+                    'Get new Wiz_Range_ID from ITIL_Counters
+                    'stop
+                    strCMD = ""
+                    strCMD = strCMD & "update ITIL_Counters set Wiz_Title_ID = Wiz_Title_ID + 1"
+                    ITILdb.Execute (strCMD)
+                    rstQ.Close
+                    Set rstQ = Nothing
+                    strCMD = "select Wiz_Title_ID from ITIL_Counters"
+                    Set rstQ = ITILdb.OpenRecordset(strCMD)
+                    intWiz_Title_ID = rstQ.Fields(0).Value
+                    strCMD = "insert into ITIL_Wiz_Titles (Wiz_Title_ID, Field_Title) select " & intWiz_Title_ID & ", " & Chr(34) & xlsWS.Cells(5, intLC).Value & Chr(34)
+                    ITILdb.Execute (strCMD)
+                End If
+                strCMD = ""
+                strCMD = "insert into ITIL_Wiz_Tables (Wiz_ID, Field_Order, Wiz_Range_ID, Wiz_Title_ID) select "
+                strCMD = strCMD & intWiz_ID
+                strCMD = strCMD & ", " & intLC
+                strCMD = strCMD & ", " & intWiz_Range_ID
+                strCMD = strCMD & ", " & intWiz_Title_ID
+                ITIL_TabsAndTitles.Execute (strCMD)
+                intLC = intLC + 1
+            Loop
+            'now create a recordset of the field names to be populated in order
+            'only populate those field
+            strCMD = ""
+            strCMD = strCMD & "update ITIL_Counters set "
+            strCMD = strCMD & "intWiz_ID = " & intWiz_ID
+            strCMD = strCMD & ", strRange_Name = " & Chr(34) & xlsWS.Name & Chr(34)
+            ITILdb.Execute (strCMD)
+            strITIL_Table = xlsWS.Name
+            rstQ.Close
+            Set rstQ = Nothing
+            'Set rstq = ITIL_PI.OpenRecordset("TaFfCW") 'Tables and Fields for Current Wizard
+            For intRC = 1 To intEIEC
+                strCMD = ""
+                strCMD = strCMD & "insert into Wiz_FD_Overall (Wiz_ID,"
+                rstQ.MoveFirst
+                While Not rstQ.EOF
+                    strCMD = strCMD & "[" & rstQ.Fields("ITIL_Field_Name").Value & "]" & ", "
+                    rstQ.MoveNext
+                Wend
+                strCMD = Mid(strCMD, 1, Len(strCMD) - 2)
+                strCMD = strCMD & ") select "
+                strCMD = strCMD & intWiz_ID
+                rstQ.MoveFirst
+                While Not rstQ.EOF
+                    strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Cells(intRC + 11, rstQ.Fields("Field_order").Value).Value, Chr(34), "'") & Chr(34)
+                    rstQ.MoveNext
+                Wend
+                FDdb.Execute (strCMD)
+            Next intRC
+        End If
+        Set xlsWS = xlsWB.Worksheets("User Action Log")
+        xlsWS.Select
+        strCMD = ""
+        strCMD = strCMD & "select count(*) from ITIL_VBA_Versions where "
+        strCMD = strCMD & "Wiz_Version = " & Chr(34) & strWiz_Version & Chr(34)
+        strCMD = strCMD & " and Wiz_Env = " & Chr(34) & "P" & Chr(34)
+        Set rstQ = ITILdb.OpenRecordset(strCMD)
+        If rstQ.Fields(0).Value = 0 Then
+            rstQ.Close
+            Set rstQ = Nothing
+            'stop 'not tested
+            'this is a new version with respect to the versions table
+            'Get the next Wiz_Ver_ID from the counters table
+            ITILdb.Execute ("update ITIL_Counters set Wiz_Ver_ID = Wiz_Ver_ID+1")
+            Set rstQ = ITILdb.OpenRecordset("ITIL_Counters", dbOpenTable)
+            intWiz_ID = rstQ.Fields("Wiz_Ver_ID").Value
+            strCMD = ""
+            strCMD = strCMD & "select max(wiz_ver_id from itil_vba_versions)"
+            Set rstQ = CurrentDb.OpenRecordset(strCMD)
+            intWiz_Ver_ID = rstQ.Fields(0).Value + 1
+            rstQ.Close
+            Set rstQ = Nothing
+            strCMD = ""
+            strCMD = strCMD & "insert into itil_vba_version (Wiz_Ver_ID, Wiz_Version, Wiz_Env)"
+            strCMD = strCMD & "select " & intWiz_Ver_ID & ", " & Chr(34) & strWiz_Version & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & strENV & Chr(34)
+            CurrentDb.Execute (strCMD)
+        Else
+            strCMD = ""
+            strCMD = strCMD & "select wiz_Ver_id from itil_vba_versions where "
+            strCMD = strCMD & "Wiz_Version = " & Chr(34) & strWiz_Version & Chr(34)
+            strCMD = strCMD & " and Wiz_Env = " & Chr(34) & "P" & Chr(34)
+            Set rstQ = ITILdb.OpenRecordset(strCMD)
+            intWiz_Ver_ID = rstQ.Fields(0).Value
+            rstQ.Close
+            Set rstQ = Nothing
+        End If
+        'Now load the User Action Log
+        'Call InventoryUserActionLogs
+        Set xlsWS = xlsWB.Worksheets("User Action Log")
+        xlsWS.Select
+        strWV = xlsWS.Cells(1, 1).Value
+        intER = 1
+        Do Until IsEmpty(xlsWS.Range("A" & intER, "A" & intER).Value)
+            intER = intER + 1
+        Loop
+        intER = intER - 1
+        intUALRC = intER
+       'Format(dTime, "hh:mm:ss")
+        For intSR = 3 To intER
+            'convert text to date
+            '1 '11-Aug-15_11:29:08 AM
+            '2 '21.Aug.2015_10:03:48
+            '3 '07.Sep.2015_12:01:08 PM
+            '4 '12.08.2015_11:29:05 ddmmyyyy done
+            '5 '19.8.2015_10:46:28 ddmyyyy
+            '6 '9.9.15_13:30:23
+            '7 '10/8/2015_PM 4:55:09 ddmyyyy all these dates are not getting trapped here
+            '8 '11/08/2015_02:36:09 p.m. ddmmyyyy done
+            '            'target format is mmddyyyy hhmmss
+            '
+            '1 will always have 2 dashes
+            '2 will always have 2 dots and 3 characters of text but no AM or PM
+            '3 will always have 2 dots and 3 characters of text and AM or PM
+            '
+            'all date with no characters should first be reformatted as two digit month and day and 4 digit year
+            'To determine month and day position of dates with 2 dots, reference the file timestamp
+            'target format is mmddyyyy hhmmss
+            If InStr(1, xlsWS.Range("A" & intSR).Value, "/") > 0 And InStr(1, xlsWS.Range("A" & intSR).Value, ".") = 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "_AM") = 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "_PM") = 0 Then
+                dtCurrent = Replace(xlsWS.Range("A" & intSR).Value, "_", " ")
+'still need to develop
+'            ElseIf (InStr(1, xlsWS.Range("A" & intSR).Value, "/") = 0 And InStr(1, xlsWS.Range("A" & intSR).Value, ".") = 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "_AM") > 0) Or (InStr(1, xlsWS.Range("A" & intSR).Value, "/") > 0 And InStr(1, xlsWS.Range("A" & intSR).Value, ".") = 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "_PM") > 0) Then
+'            '10/8/2015_PM 4:55:09
+'                strCMD = xlsWS.Range("A" & intSR).Value
+'                strCMD = IIf(InStr(4, strCMD, "/") = 5, Mid(strCMD, 1, 3) & "0" & Mid(strCMD, 4, 20), strCMD)
+'                strCMD = Replace(strCMD, "_", " ")
+'                dtCurrent = IIf(InStr(xlsWS.Range("A" & intSR).Value, "_AM") > 0, Replace(Replace(xlsWS.Range("A" & intSR).Value, "_", " "), "_AM", ""), Replace(Replace(xlsWS.Range("A" & intSR).Value, "_", " "), "_PM", ""))
+            ElseIf InStr(xlsWS.Range("A" & intSR).Value, "-") > 0 And IsNumeric(Mid(xlsWS.Range("A" & intSR).Value, 4, 1)) Then
+                dtCurrent = Mid(xlsWS.Range("A" & intSR).Value, 6, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 9, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 4) & " " & Mid(xlsWS.Range("A" & intSR).Value, 12, 8)
+            ElseIf InStr(xlsWS.Range("A" & intSR).Value, ".") > 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "/") > 0 Then
+                '11/08/2015_02:36:09 p.m.
+                dtCurrent = Replace(Replace(xlsWS.Range("A" & intSR).Value, "_", " "), ".", "")
+            ElseIf InStr(xlsWS.Range("A" & intSR).Value, ".") > 0 And InStr(1, xlsWS.Range("A" & intSR).Value, "/") = 0 Then
+                '12.08.2015_11:29:05
+                dtCurrent = Mid(xlsWS.Range("A" & intSR).Value, 4, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 7, 4) & " " & Mid(xlsWS.Range("A" & intSR).Value, 12, 8)
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Jan" Then
+                dtCurrent = CDate("01/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Feb" Then
+                dtCurrent = CDate("02/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Mar" Then
+                dtCurrent = CDate("03/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Apr" Then
+                dtCurrent = CDate("04/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "May" Then
+                dtCurrent = CDate("05/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Jun" Then
+                dtCurrent = CDate("06/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Jul" Then
+                dtCurrent = CDate("07/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Aug" Then
+                dtCurrent = CDate("08/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Sep" Then
+                dtCurrent = CDate("09/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Oct" Then
+                dtCurrent = CDate("10/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Nov" Then
+                dtCurrent = CDate("11/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            ElseIf Mid(xlsWS.Range("A" & intSR).Value, 4, 3) = "Dec" Then
+                dtCurrent = CDate("12/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 8, 2) & " " & Mid(xlsWS.Range("A" & intSR).Value, 11, 11))
+            Else
+                dtCurrent = Mid(xlsWS.Range("A" & intSR).Value, 4, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 1, 2) & "/" & Mid(xlsWS.Range("A" & intSR).Value, 7, 4) & " " & Mid(xlsWS.Range("A" & intSR).Value, 12, 8)
+            End If
+            'calculate and format the duration
+            'duration is based on days:hours:minutes:seconds
+            'the initial calculation is in seconds
+            'days is simply seconds \ (60 seconds in a minute * 60 minutes in a hour * 24 hours in a day) or 86400
+            'hours minutes and seconds those units of time left over from each calculation
+            If intSR = 3 Then
+                'the first value will always be this since it takes two action log entries to calculate a duration
+                strDur = "000:00:00:00"
+            Else
+                'Calculate the total seconds taken
+                strDur = Abs(DateDiff("s", dtCurrent, dtLast))
+                intSecondsLeft = strDur
+                'Calculate the rounded days taken
+                strDays = Round(intSecondsLeft / 86400)
+                'now format the string with padded zeroes
+                If strDays < 99 And strDays > 9 Then
+                    strDays = "0" & strDays
+                ElseIf strDays < 10 Then
+                    strDays = "00" & Trim(strDays)
+                End If
+                intSecondsLeft = intSecondsLeft - (strDays * 86400)
+                'convert left over seconds to hours
+                strHours = Round(intSecondsLeft / (60 * 60))
+                intSecondsLeft = intSecondsLeft - (strHours * 60 * 60)
+                'now format the string with padded zeroes
+                If strHours < 10 Then
+                    strHours = "0" & Trim(strHours)
+                End If
+                'convert remaining seconds to minutes left
+                strMinutes = Abs(Round(intSecondsLeft / 60))
+                If strMinutes < 10 Then
+                    strMinutes = "0" & Trim(strMinutes)
+                Else
+                    strMinutes = Trim(strMinutes)
+                End If
+                'calculate seconds left
+                intSecondsLeft = intSecondsLeft - (strMinutes * 60)
+                strSeconds = Abs(intSecondsLeft)
+                If strSeconds < 10 Then
+                    strSeconds = "0" & Trim(strSeconds)
+                Else
+                    strSeconds = Trim(strSeconds)
+                End If
+                strDur = Trim(strDays) & ":" & Trim(strHours) & ":" & Trim(strMinutes) & ":" & Trim(strSeconds)
+            End If
+            'now apply the new data model
+            'first find the ID
+            'this will be the ID with a subject of CTQ Analaysis and no related request or incident or PBI or Rally Item
+            strCMD = ""
+            strCMD = "insert into Wiz_User_Action_Log ("
+            strCMD = strCMD & "XLS_Row, AI_Done, Action, Location, Field_Value, Wiz_ID, AI_Duration) "
+            strCMD = strCMD & "select "
+            strCMD = strCMD & intSR
+            strCMD = strCMD & ", " & Chr(34) & dtLast & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Range("B" & intSR).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWS.Range("C" & intSR).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & Replace(xlsWS.Range("D" & intSR).Value, Chr(34), "'") & Chr(34)
+            strCMD = strCMD & ", " & intWiz_ID
+            strCMD = strCMD & ", " & Chr(34) & strDur & Chr(34)
+            UALdb.Execute (strCMD)
+            dtLast = dtCurrent
+        Next intSR
+        '**********************************************************
+        xlsWB.Close
+        Set xlsWB = Nothing
+        strCMD = ""
+        strCMD = "C:\Users\RROSE66\Documents\Archives\Import_Files\Processed\" & strWiz_Name
+        If blnHistory = True Then
+            fsoT.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\" & strWiz_Name
+        Else
+            fso.MoveFile "C:\Users\RROSE66\Documents\Archives\Import_Files\" & strWiz_Name, "C:\Users\RROSE66\Documents\Archives\Import_Files\Processed\"
+        End If
+        strWiz_Name = ""
+        intWiz_Ver_ID = 0
+        strCDSID = ""
+        intEIEC = 0
+        intUALRC = 0
+        strWiz_Name = Dir(strFP)
+    Next intFC
+    xlsApp.Quit
+    Set xlsApp = Nothing
+    MsgBox ("Batch Import of Files is done")
+End Sub

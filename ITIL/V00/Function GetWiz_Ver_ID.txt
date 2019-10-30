@@ -1,0 +1,12 @@
+Function GetWiz_Ver_ID(strWV As String) As Integer
+    'Dim SourceDb As DAO.Database
+    Dim rstWV As DAO.Recordset
+    'Set DataDb = DBEngine.OpenDatabase("C:\Users\rrose66\Documents\ITIL\ITIL_Data.accdb", 0)
+    Set rstWV = DataDb.OpenRecordset("ITIL_VBA_Versions", dbOpenTable)
+    rstWV.Index = "Wiz_Version"
+    rstWV.Seek "=", strWV
+    If rstWV.NoMatch Then
+    Else
+        GetWiz_Ver_ID = rstWV.Fields("Wiz_Ver_ID").Value
+    End If
+End Function

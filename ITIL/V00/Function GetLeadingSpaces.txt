@@ -1,0 +1,13 @@
+Function GetLeadingSpaces(strSourceLine As String) As Integer
+    Dim intLengthOfString As Integer
+    Dim intCharPosition As Integer
+    intCharPosition = 0
+    For intLengthOfString = 1 To Len(strSourceLine)
+        If Mid(strSourceLine, intLengthOfString, 1) = " " Then
+            intCharPosition = intCharPosition + 1
+        Else
+            intLengthOfString = Len(strSourceLine)
+        End If
+    Next intLengthOfString
+    GetLeadingSpaces = intCharPosition
+End Function

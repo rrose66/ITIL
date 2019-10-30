@@ -1,0 +1,13 @@
+Sub CleanUpLocalImportFiles()
+    Dim fso As Object 'File System Object
+    Dim rstQ As Recordset
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set rstQ = CurrentDb.OpenRecordset("select name from [Shared Documents]")
+    rstQ.MoveFirst
+    While Not rstQ.EOF
+        If (fso.FileExists(rstQ.Fields(0).Value)) Then
+            fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\" & rstQ.Fields(0).Value
+        End If
+        rstQ.MoveNext
+    Wend
+End Sub

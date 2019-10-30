@@ -1,0 +1,7 @@
+Function GetFN_ID(strFileName As String) As Long
+    Dim rstFN As DAO.Recordset
+    Set rstFN = CurrentDb.OpenRecordset("ITIL_Wiz_File_Names", dbOpenTable)
+    rstFN.Index = "FileName"
+    rstFN.Seek "=", strFileName
+    GetFN_ID = rstFN.Fields("FN_ID").Value
+End Function

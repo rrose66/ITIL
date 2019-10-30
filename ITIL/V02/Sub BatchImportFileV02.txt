@@ -1,0 +1,51 @@
+Sub BatchImportFileV02()
+    'Manually Paste files from SharePoint and on weekends copy the archive
+    Debug.Print Now()
+    Debug.Print "Gathering Archived and SharePoint file names"
+    Call GetListOfArchivedFilesV03
+
+    Debug.Print Now()
+    Debug.Print "Dir list is in db, now gathering new files into db from Source dir"
+    Call GetNewFilesV02
+
+    Debug.Print Now()
+    Debug.Print "File names are in db, now spinning through the Source dir validating files and flagging the corupt files"
+    Call FlagCoruptedFilesV03
+    
+    Debug.Print Now()
+    Debug.Print "Files have been validated and flagged if Corupt, now populating supporting data"
+    Call ETL_ArchivesToWiz_IDsV02 'update normalized supporting file
+    
+    Debug.Print Now()
+    Debug.Print "Support data is populated, now getting new Wiz_IDs"
+    Call GetWizIDs_v01 'WIP now works from archived file name list that already knows if file was corrupt
+    
+    Debug.Print Now()
+    Debug.Print "New Wiz_IDs are populated, now populating Tab data"
+    Call GetWizInvV01
+    
+    Debug.Print Now()
+    Debug.Print "Tab data is populated, now populating CTQ data"
+    Call GetCTQsV00
+    
+    Debug.Print Now()
+    Debug.Print "CTQ data is populated, now populating User Action Log"
+    Call GetUALsV01
+
+    Debug.Print Now()
+    Debug.Print "User Action Logs are populated, now populating PADB"
+    Call GetPADBv00
+    
+    Debug.Print Now()
+    Debug.Print "PADB data is populated, now populating Team Works Call Log"
+    Call GetTCCv00
+
+    Debug.Print Now()
+    Debug.Print "Team Workd Call Log data is populated, now populating End Items"
+    Call GetEIsv00
+
+    'This will be implemented after all needed data is populated
+    Debug.Print Now()
+    Debug.Print "All data is populated"
+'    Call LocalFileCleanUpV01
+End Sub

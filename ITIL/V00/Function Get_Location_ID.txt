@@ -1,0 +1,22 @@
+Function Get_Location_ID(strLocation As String) As Integer
+    Dim rstLocations As DAO.Recordset
+    Set rstLocations = dbUL.OpenRecordset("Locations", dbOpenTable)
+    rstModules.Index = "Locations"
+    rstLocations.Seek "=", (strLocation 
+    If rstLocations.NoMatch Then
+	with rstLocations
+		.add
+		.fields("Location").value = strlocation
+		.fields("Location_ID").value = getNewLocation_ID()
+	        GetS_Module_ID = .fields("Location_ID").value
+	end with
+    Else
+        Get_Location_ID= rstLocations.Fields("Location_ID").Value
+    End If
+End Function
+Function GetNewLocation_ID() as long
+	rstq.close
+	set rstq = nothing
+	set rstq = dbUL.openrecordset("NextLocationID")
+	GetNewLocation_ID = rstq.fields(0).value
+end function

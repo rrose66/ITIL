@@ -1,0 +1,35 @@
+Function GetWiz_Ver_IDv00(strWV As String, strENV As String) As Integer
+    Dim rstQ As Recordset
+    strCMD = ""
+    strCMD = strCMD & "select count(*) from ITIL_VBA_Versions where "
+    strCMD = strCMD & "Wiz_Version = " & Chr(34) & strWV & Chr(34)
+    strCMD = strCMD & " and Wiz_Env = " & Chr(34) & "P" & Chr(34)
+    Set rstQ = CurrentDb.OpenRecordset(strCMD)
+    If rstQ.Fields(0).Value = 0 Then
+        Stop 'not tested
+        rstQ.Close
+        Set rstQ = Nothing
+        strCMD = ""
+        strCMD = strCMD & "select max(wiz_ver_id from itil_vba_versions)"
+        Set rstQ = CurrentDb.OpenRecordset(strCMD)
+        intWiz_Ver_ID = rstQ.Fields(0).Value + 1
+        rstQ.Close
+        Set rstQ = Nothing
+        strCMD = ""
+        strCMD = strCMD & "insert into itil_vba_version (Wiz_Version, Wiz_Env)"
+        strCMD = strCMD & "select " & Chr(34) & strWV & Chr(34)
+        strCMD = strCMD & ", " & Chr(34) & strENV & Chr(34)
+        CurrentDb.Execute (strCMD)
+        GetWiz_Ver_IDv00 = intWiz_Ver_ID
+    Else
+        strCMD = ""
+        strCMD = strCMD & "select wiz_Ver_id from itil_vba_versions where "
+        strCMD = strCMD & "Wiz_Version = " & Chr(34) & strWV & Chr(34)
+        strCMD = strCMD & " and Wiz_Env = " & Chr(34) & "P" & Chr(34)
+        Set rstQ = CurrentDb.OpenRecordset(strCMD)
+        intWiz_Ver_ID = rstQ.Fields(0).Value
+        GetWiz_Ver_IDv00 = rstQ.Fields(0).Value
+        rstQ.Close
+        Set rstQ = Nothing
+    End If
+End Function

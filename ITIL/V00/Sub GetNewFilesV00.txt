@@ -1,0 +1,18 @@
+Sub GetNewFilesV00()
+    Dim rstNewFile As Recordset
+    Dim strSFP As String 'Source File Path
+    Dim strTFP As String 'Target File Path
+    Dim fso As Object 'File System Object
+    Dim fpo As Object 'File Path Object
+    Dim fco As Object 'File Collection Object
+    Dim fno As Object 'File Name Object
+    strSFP = "S:\AVBOM2\AVBOM2 Import Files\archive 2015\"
+    strTFP = "C:\Users\RROSE66\Documents\Archives\Import_Files\Archive2015\"
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set rstNewFile = CurrentDb.OpenRecordset("NewImportFiles")
+    While Not rstNewFile.EOF
+        fso.CopyFile strSFP & rstNewFile.Fields(0).Value, strTFP
+        rstNewFile.MoveNext
+    Wend
+
+End Sub

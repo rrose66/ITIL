@@ -1,0 +1,20 @@
+Function GetS_Module_ID(strS_Module As String) As Integer
+    'Dim SourceDb As DAO.Database
+    Dim rstModules As DAO.Recordset
+    'Set SourceDB = DBEngine.OpenDatabase("C:\Users\rrose66\Documents\ITIL\ITIL_VBA_Source.accdb", 0)
+    Set rstModules = SourceDb.OpenRecordset("S_Modules", dbOpenTable)
+    rstModules.Index = "S_Module"
+    rstModules.Seek "=", strS_Module
+    If rstModules.NoMatch Then
+        rstModules.Index = "PrimaryKey"
+        rstModules.MoveLast
+        GetS_Module_ID = rstModules.Fields("s_module_id").Value + 1
+        strCMD = ""
+        strCMD = strCMD & "insert into s_modules (s_module_id, s_module) select "
+        strCMD = strCMD & GetS_Module_ID
+        strCMD = strCMD & ", " & Chr(34) & strS_Module & Chr(34)
+        SourceDb.Execute (strCMD)
+    Else
+        GetS_Module_ID = rstModules.Fields("s_module_id").Value
+    End If
+End Function

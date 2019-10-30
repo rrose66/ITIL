@@ -1,0 +1,77 @@
+Sub GetWizInvV01()
+    Dim blnIssue As Boolean
+    Dim fso As Object 'File System Object
+    Dim TABSdb As DAO.Database
+    Dim strPath As String
+    Dim strFullPath As String
+    Dim xlsApp As New Excel.Application
+    Dim xlsWB As New Excel.Workbook
+    Dim intWS As Integer
+    Dim rstF As Recordset
+    Dim rstLWTID As Recordset
+    Dim intWiz_Tab_ID As Integer
+    Dim rstITIL_Wiz_Tab_Names As DAO.Recordset
+    Set xlsApp = CreateObject("Excel.Application")
+    Set fso = CreateObject("scripting.filesystemobject")
+    xlsApp.Visible = False
+    xlsApp.DisplayAlerts = False
+    Set xlsWB = xlsApp.ActiveWorkbook
+    blnIssue = False
+    Set rstF = CurrentDb.OpenRecordset("NeededTABsV01")
+    'first find the next wiz_tab_ID
+    strCMD = ""
+    strCMD = "select max(Wiz_Tab_ID) from ITIL_Wiz_Tab_Names"
+    Set rstLWTID = CurrentDb.OpenRecordset(strCMD)
+    intWiz_Tab_ID = rstLWTID.Fields(0).Value
+    Set rstITIL_Wiz_Tab_Names = CurrentDb.OpenRecordset("ITIL_Wiz_Tab_Names", dbOpenTable)
+    Set TABSdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Wiz_Tabs.accdb", 0)
+    While Not rstF.EOF
+        If Not fso.FileExists("C:\Users\RROSE66\Documents\Archives\Import_Files\Source\" & rstF.Fields("FileName").Value) Then
+            fso.CopyFile "S:\AVBOM2\AVBOM2 Import Files\archive 2015\" & rstF.Fields("FileName").Value, "C:\Users\RROSE66\Documents\Archives\Import_Files\Source\"
+        End If
+
+        'fso.MoveFile strSourcePath & rstF.Fields("FileName").Value, "C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\"
+        Set xlsWB = xlsApp.Workbooks.Open("C:\Users\RROSE66\Documents\Archives\Import_Files\Source\" & rstF.Fields("FileName").Value)
+        If blnIssue = False Then
+            xlsWB.UpdateLinks = xlUpdateLinksNever
+            xlsWB.Save
+            For intWS = 1 To xlsWB.Worksheets.Count
+                'now update the normalized model
+                rstITIL_Wiz_Tab_Names.Index = "Wiz_Tab_Name"
+                rstITIL_Wiz_Tab_Names.Seek "=", xlsWB.Worksheets(intWS).Name
+                If rstITIL_Wiz_Tab_Names.NoMatch Then
+                    'add the name to the reference table
+                    strCMD = ""
+                    strCMD = strCMD & "insert into ITIL_Wiz_Tab_Names (Wiz_Tab_ID, Wiz_Tab_Name) select "
+                    strCMD = strCMD & intWiz_Tab_ID
+                    strCMD = strCMD & ", " & Chr(34) & xlsWB.Worksheets(intWS).Name & Chr(34)
+                    CurrentDb.Execute (strCMD)
+                End If
+                'now add a record to the denormalized table
+                strCMD = ""
+                strCMD = strCMD & "insert into ITIL_Wiz_Tabs (Wiz_ID, WorkSheet_Name) select "
+                strCMD = strCMD & rstF.Fields("Wiz_ID").Value
+                strCMD = strCMD & ", " & Chr(34) & xlsWB.Worksheets(intWS).Name & Chr(34)
+                TABSdb.Execute (strCMD)
+            Next intWS
+            xlsWB.Close
+        Else
+            blnIssue = False
+        End If
+'        fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\Source\" & rstF.Fields("FileName").Value
+        rstF.MoveNext
+    Wend
+    
+'FileIssue:
+'    If Err.Number = 70 Then 'cannot move file
+'        xlsWB.Save
+'        xlsWB.Close
+'        blnIssue = False
+'    ElseIf Err.Number = 58 Then 'cannot move file because the file already exists in the target location
+'        fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\WIP\" & rstF.Fields(0).Value
+'        blnIssue = False
+'    Else
+'        blnIssue = True
+'    End If
+'    Resume Next
+End Sub

@@ -1,0 +1,61 @@
+Sub integrityCleanUp()
+    'first manually delete the file from the processed folder if it exists
+'    Debug.Print xlsWB.Name
+    On Error Resume Next
+    Dim rstQ As DAO.Recordset
+    Dim fso As Object 'File System Object
+    Dim fpo As Object 'File Path Object
+    Dim fco As Object 'File Collection Object
+    Dim fno As Object 'File Name Object
+    Dim fsoT As Object 'File System Object for Target
+    Dim fpot As Object
+    Dim fcot As Object
+    Dim fnot As Object
+    Dim strFPS As String
+    Dim strFPT As String
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set fsoT = CreateObject("scripting.filesystemobject")
+    strFPS = "C:\Users\RROSE66\Documents\Archives\Import_Files\Processed\"
+    strFPT = "C:\Users\RROSE66\Documents\Archives\Import_Files\ReProcess\"
+    strCMD = ""
+    strCMD = "select Wiz_Name from ITIL_WIZ_UAL_Report where ticket = 60 and wiz_name <> " & Chr(34) & "." & Chr(34)
+    Set rstQ = CurrentDb.OpenRecordset(strCMD)
+    rstQ.MoveFirst
+    While Not rstQ.EOF
+        fso.MoveFile strFPS & rstQ.Fields(0).Value, strFPT
+        rstQ.MoveNext
+    Wend
+    Stop
+    intWiz_ID = 10000
+    strCMD = ""
+    strCMD = "delete from ITIL_Inv_WS where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from Wiz_User_Action_Log where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from Wiz_User_Action_Log1 where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from Wiz_User_Action_Log2 where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from ITIL_Wiz_UAL_Report where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from ITIL_Wiz_Tables where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from ITIL_Wiz_CTQ where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from ITIL_Wiz_Scorecards where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from Wiz_End_Items where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from Wiz_FD_Overall where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from Wiz_ID_Overall where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from Prog-FundingSource where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from Prog-Plant where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    strCMD = "delete from Teamworks_Call_Log where Wiz_ID < 10000 and ticket = 60"
+    CurrentDb.Execute (strCMD)
+    
+    strCMD = ""
+End Sub

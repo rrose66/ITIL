@@ -1,0 +1,104 @@
+Sub MemAll()
+    Dim SourceFile As String
+    Dim strInput As String
+    Dim strTPM As String
+    Dim strAPM As String
+    Dim strVMMS As String
+    Dim strVMA As String
+    Dim strVMIU As String
+    Dim retVar As Variant
+    Dim blnFNL As Boolean 'file not locked
+    blnFNL = False
+'    On Error GoTo errorHandler
+'    retVar = Shell("C:\Users\RROSE66\Documents\myMem.bat")
+    Stop 'run memCaller.ps1 and wait for it to complete
+    SourceFile = "C:\Users\RROSE66\Documents\psMem.txt"
+    Do Until blnFNL
+        blnFNL = True
+        Open SourceFile For Input Lock Write As #1 'want to throw an error then use it to move forward
+    Loop
+'    Stop
+    Close #1
+'    Stop
+    Open SourceFile For Input As #1
+        Do While Not EOF(1)
+            Line Input #1, strInput
+            If Mid(strInput, 1, 22) = "TotalVirtualMemorySize" Then
+            'Stop
+                intTVMS = Mid(strInput, 26, 8)
+            End If
+            If Mid(strInput, 1, 22) = "TotalVisibleMemorySize" Then
+            'Stop
+                intTVsMS = Mid(strInput, 26, 8)
+            End If
+            If Mid(strInput, 1, 18) = "FreePhysicalMemory" Then
+            'Stop
+                intFPM = Mid(strInput, 26, 8)
+            End If
+            If Mid(strInput, 1, 17) = "FreeVirtualMemory" Then
+            'Stop
+                intFVM = Mid(strInput, 26, 8)
+            End If
+            If Mid(strInput, 1, 22) = "FreeSpaceInPagingFiles" Then
+            'Stop
+                intFSPF = Mid(strInput, 26, 8)
+            End If
+            If Mid(strInput, 1, 22) = "Total Physical Memory:" Then
+                    strTPM = Mid(strInput, 28, 15)
+                    If Right(strTPM, 2) = "MB" Then
+                        strTPM = Mid(strTPM, 1, Len(strTPM) - 3) & "000"
+                        strTPM = Replace(strTPM, ",", "")
+                        intTPM = strTPM
+                    End If
+                    Debug.Print strTPM
+            End If
+            If Mid(strInput, 1, 26) = "Available Physical Memory:" Then
+                    strAPM = Mid(strInput, 28, 15)
+                    If Right(strAPM, 2) = "MB" Then
+                        strAPM = Mid(strAPM, 1, Len(strAPM) - 3) & "000"
+                        strAPM = Replace(strAPM, ",", "")
+                        intAPM = strAPM
+                    End If
+                    Debug.Print strAPM
+            End If
+            If Mid(strInput, 1, 25) = "Virtual Memory: Max Size:" Then
+                    strVMMS = Mid(strInput, 28, 15)
+                    If Right(strVMMS, 2) = "MB" Then
+                        strVMMS = Mid(strVMMS, 1, Len(strVMMS) - 3) & "000"
+                        strVMMS = Replace(strVMMS, ",", "")
+                        intVMMS = strVMMS
+                    End If
+                    Debug.Print strVMMS
+            End If
+            If Mid(strInput, 1, 26) = "Virtual Memory: Available:" Then
+                    strVMA = Mid(strInput, 28, 15)
+                    If Right(strVMA, 2) = "MB" Then
+                        strVMA = Mid(strVMA, 1, Len(strVMA) - 3) & "000"
+                        strVMA = Replace(strVMA, ",", "")
+                        intVMA = strVMA
+                    End If
+                    Debug.Print strVMA
+            End If
+            If Mid(strInput, 1, 23) = "Virtual Memory: In Use:" Then
+                    strVMIU = Mid(strInput, 28, 15)
+                    If Right(strVMIU, 2) = "MB" Then
+                        strVMIU = Mid(strVMIU, 1, Len(strVMIU) - 3) & "000"
+                        strVMIU = Replace(strVMIU, ",", "")
+                        intVMIU = strVMIU
+                    End If
+                    Debug.Print strVMIU
+            End If
+        Loop
+        Close #1
+'errorHandler:
+'    If Err.Number = 53 Then 'file not found
+'    Stop
+'        blnFNL = False
+'        Resume errorHandler
+'    ElseIf Err.Number = 70 Then 'permission denied
+'    Stop
+'        blnFNL = False
+'        Resume Next
+'    End If
+
+End Sub

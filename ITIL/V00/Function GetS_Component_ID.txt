@@ -1,0 +1,20 @@
+Function GetS_Component_ID(strS_Component As String) As Integer
+    'Dim SourceDb As DAO.Database
+    Dim rstComponents As DAO.Recordset
+    'Set SourceDB = DBEngine.OpenDatabase("C:\Users\rrose66\Documents\ITIL\ITIL_VBA_Source.accdb", 0)
+    Set rstComponents = SourceDb.OpenRecordset("S_Components", dbOpenTable)
+    rstComponents.Index = "S_Component"
+    rstComponents.Seek "=", strS_Component
+    If rstComponents.NoMatch Then
+        rstComponents.Index = "PrimaryKey"
+        rstComponents.MoveLast
+        GetS_Component_ID = rstComponents.Fields("s_Component_id").Value + 1
+        strCMD = ""
+        strCMD = strCMD & "insert into s_components (s_Component_id, s_Component) select "
+        strCMD = strCMD & GetS_Component_ID
+        strCMD = strCMD & ", " & Chr(34) & strS_Component & Chr(34)
+        SourceDb.Execute (strCMD)
+    Else
+        GetS_Component_ID = rstComponents.Fields("s_Component_id").Value
+    End If
+End Function

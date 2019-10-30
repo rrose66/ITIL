@@ -1,0 +1,4 @@
+Function GetTicket_ID(FN_ID As Long) As Long
+    Set rstQ = CurrentDb.OpenRecordset("NextTicket_ID")
+    GetTicket_ID = rstQ.Fields(0).Value
+End Function

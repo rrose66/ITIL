@@ -1,0 +1,44 @@
+Sub GetPADBv00()
+    Set rstQ = CurrentDb.OpenRecordset("NeededPADBs")
+    Dim PADBdb As DAO.Database
+    Set PADBdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_PADB.accdb", 0)
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    xlsApp.Visible = False
+    xlsApp.DisplayAlerts = False
+    While Not rstQ.EOF
+        Set xlsWB = xlsApp.Workbooks.Open(STR_SOURCE_PATH & rstQ.Fields("FileName").Value)
+        xlsWB.UpdateLinks = xlUpdateLinksNever
+        intER = 1
+        xlsWB.Worksheets("PADB").Select
+        While Not IsEmpty(ActiveSheet.Cells(intER, 1).Value)
+            intER = intER + 1
+        Wend
+        For intER = 2 To intER - 1
+            strCMD = ""
+            strCMD = strCMD & "insert into Wiz_PADB ([Wiz_ID], [PADB Call Status], [Part/Base], [Part/Name], [Usage/CPSC], [Usage/PAFUniqueId]"
+            strCMD = strCMD & ", [PartAddressFunction/PAFName], [Usage/CSS], [Usage/UnderUpperBodyIndicator], [CADUsage/OwningActivity]"
+            strCMD = strCMD & ", [Usage/PMT3D], [ProdLead], [ProtoLead], [API], [Electrical Interface], [CATIII]"
+            strCMD = strCMD & ") select "
+            strCMD = strCMD & rstQ.Fields("Wiz_ID").Value
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 1).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 2).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 3).Value, "&", " and ") & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 4).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 5).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 6).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 7).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 8).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 9).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 10).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 11).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 12).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 13).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 14).Value & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 15).Value & Chr(34)
+            PADBdb.Execute (strCMD)
+        Next intER
+        xlsWB.Close
+        rstQ.MoveNext
+    Wend
+End Sub

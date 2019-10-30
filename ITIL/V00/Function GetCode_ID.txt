@@ -1,0 +1,18 @@
+Function GetCode_ID(strSourceLine As String) As Long
+    Dim rstCode As DAO.Recordset
+    rstQ = CurrentDb.OpenRecordset("NextCode_ID")
+    Set rstCode = SourceDb.OpenRecordset("S_Code_Lines")
+    rstCode.Index = "S_Code"
+    rstCode.Seek "=", Trim(strSourceLine)
+    If rstCode.NoMatch Then
+        strCMD = ""
+        strCMD = strCMD & "insert into s_code (s_code_id, leading_spaces,s_Code) select "
+        strCMD = strCMD & rstQ.Fields(0).Value
+        strCMD = strCMD & ", " & GetLeadingSpaces(strSourceLine)
+        strCMD = strCMD & ", " & Chr(34) & Trim(strSourceLine) & Chr(34)
+        SourceDb.Execute (strCMD)
+    Else
+        GetCode_ID = rstCode.Fields("Code_ID").Value
+    End If
+    Stop
+End Function

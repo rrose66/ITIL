@@ -1,0 +1,34 @@
+Sub GetTCCv00()
+    Set rstQ = CurrentDb.OpenRecordset("NeededTCCs")
+    Dim TCCdb As DAO.Database
+    Set TCCdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_Team_Works_Call_Log.accdb", 0)
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    xlsApp.Visible = False
+    xlsApp.DisplayAlerts = False
+    While Not rstQ.EOF
+        Set xlsWB = xlsApp.Workbooks.Open(STR_SOURCE_PATH & rstQ.Fields("FileName").Value)
+        xlsWB.UpdateLinks = xlUpdateLinksNever
+        intER = 4
+        xlsWB.Worksheets("User Action Log").Select
+        While Not IsEmpty(xlsWB.ActiveSheet.Cells(intER, 6).Value)
+            intER = intER + 1
+        Wend
+        'If intER > 1 Then
+            For intER = 4 To intER + 3
+                strCMD = ""
+                strCMD = strCMD & "insert into Wiz_Teamworks_Call_Log ([Wiz_ID], [Request_Type], [Request_ID], [Request_Start_Time], [Request_Status]"
+                strCMD = strCMD & ") select "
+                strCMD = strCMD & rstQ.Fields("ITIL_Wiz_IDs.Wiz_ID").Value
+                strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 6).Value & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 7).Value, Chr(34), "'") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & Replace(xlsWB.ActiveSheet.Cells(intER, 8).Value, "&", " and ") & Chr(34)
+                strCMD = strCMD & ", " & Chr(34) & xlsWB.ActiveSheet.Cells(intER, 9).Value & Chr(34)
+                TCCdb.Execute (strCMD)
+            Next intER
+        'End If
+        xlsWB.Close
+        rstQ.MoveNext
+    Wend
+    
+End Sub

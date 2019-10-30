@@ -1,0 +1,47 @@
+Sub FlagCoruptedFilesV03()
+    On Error GoTo FileIssue
+    Set rstQ = CurrentDb.OpenRecordset("NeededValidationsV00")
+    Dim blnIssue As Boolean
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    xlsApp.Visible = False
+    xlsApp.DisplayAlerts = False
+    blnIssue = False
+    While Not rstQ.EOF
+        strCMD = ""
+        strCMD = strCMD & Trim(STR_SOURCE_PATH) & rstQ.Fields("FileName").Value
+        Set xlsWB = xlsApp.Workbooks.Open(strCMD)
+        If Not blnIssue Then
+            xlsWB.UpdateLinks = xlUpdateLinksNever
+            xlsWB.Save
+            xlsWB.Close
+            strCMD = ""
+            strCMD = "update ITIL_Wiz_File_Names set File_Validated = True"
+            strCMD = strCMD & " where FileName = " & Chr(34) & rstQ.Fields("FileName").Value & Chr(34)
+            CurrentDb.Execute (strCMD)
+        End If
+        'if corupt update issue to true in error handler
+        'add record to ITIL_ArchivedImportFiles
+        If blnIssue = True Then
+            strCMD = ""
+            strCMD = strCMD & "update ITIL_Wiz_File_Names set Issue = " & blnIssue
+            strCMD = strCMD & ", File_Validated = True"
+            strCMD = strCMD & " where FileName = " & Chr(34) & rstQ.Fields("FileName").Value & Chr(34)
+            CurrentDb.Execute (strCMD)
+        End If
+        rstQ.MoveNext
+    Wend
+FileIssue:
+    If Err.Number = 1004 Then
+        'file not found
+        blnIssue = True
+        Resume Next
+    ElseIf Err.Number = 0 Then
+        'file not found
+        blnIssue = True
+        Resume Next
+    Else
+        blnIssue = True
+        Resume Next
+    End If
+End Sub

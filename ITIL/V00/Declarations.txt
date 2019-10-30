@@ -1,0 +1,65 @@
+Option Compare Database
+
+Option Explicit
+'Path Constants
+Public Const STR_SOURCE_PATH As String = "C:\Users\RROSE66\Documents\Archives\Import_Files\Source\"
+'Public Const STR_SHAREPOINT_PATH As String = "C:\Users\RROSE66\Documents\Archives\Import_Files\SharePoint\"
+Public Const STR_BAD_PATH As String = "C:\Users\RROSE66\Documents\Archives\Import_Files\Bad\"
+Public Const STR_BAT_CMD_PATH As String = "C:\Users\RROSE66\Documents\Archives\Import_Files\getdirfromsV02.bat"
+Public Const STR_SOURCE_DIR_PATH As String = "C:\Users\RROSE66\Documents\Archives\Import_Files\Source.txt"
+Public Const STR_ARCHIVE_DIR_PATH As String = "C:\Users\RROSE66\Documents\Archives\Import_Files\ArchiveSource.txt"
+'Public Const STR_SHAREPOINT_DIR_PATH As String = "C:\Users\RROSE66\Documents\ITIL\SharePoint.txt"
+'Memory Variables
+Public intTPM As Double 'Total Physical Memory:
+Public intAPM As Double 'Available Physical Memory
+Public intVMMS As Double 'Virtual Memory: Max Size
+Public intVMA As Double 'Virtual Memory: Available
+Public intVMIU As Double 'Virtual Memory: In Use:
+'Power Shell Memory Variables
+Public intTVMS As Double 'Total Virtual Memory Size
+Public intTVsMS As Double 'Total Visible Memory Size
+Public intFPM As Double 'Free Physical Memory
+Public intFVM As Double 'Free Virtual Memory
+Public intFSPF As Double 'Free Space In Paging Files
+'User Action Log Variables
+Public intER As Integer 'End Record of log
+'Public intEC As Integer 'Errors Count
+'Public strLD As String * 12 'Longest Duration
+'Wizard Control Variables
+Public xlsApp As New Excel.Application
+Public xlsWB As New Excel.Workbook
+Public xlsWS As New Excel.Worksheet
+Public VBP As VBIDE.VBProject
+Public VBW As VBIDE.Windows
+Public VBC As VBComponent
+Public VBCode As CodeModule
+Public vbCodeData As CodeData
+Public DataDb As DAO.Database
+Public SourceDb As DAO.Database
+Public rstQ As Recordset
+Public blnDEV As Boolean 'True is debug mode is needed
+Public blnHistory As Boolean 'when true files are from archive so once done processing they are deleted from local drive
+Public ITILdb As DAO.Database 'ITIL_Data
+Public dtIssued As Date 'Issued Date or the date the wizard was created
+Public intEIRC As Integer 'End Item Record Count
+Public intEIEC As Integer 'End Item Edit Count
+Public intTicket As Integer
+Public intUALRC As Integer 'UAL Record Count
+Public intWiz_Range_ID As Integer
+Public intWiz_Title_ID As Integer
+Public intWiz_Ver_ID As Integer
+Public lngFN_ID As Long 'File Name ID
+Public lngWiz_Entity_ID As Long
+Public intWiz_ID As Long 'Unique Wizard Identifier
+Public rstQ As Recordset
+Public strCDSID As String
+Public strCMD As String
+Public strENV As String * 1 'Environment that the wizard was generated from
+Public strINC As String
+Public strITIL_Table As String 'Workbook tab or range name
+Public strSubject As String
+Public strWiz_Name As String 'Workbook File Name
+Public strWiz_Version As String
+Public lngRequest As Long
+Public strPBI As String * 15
+Public strWV As String * 10 'Wizard Version

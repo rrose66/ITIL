@@ -1,0 +1,202 @@
+Sub GetWizIDs_v01()
+    blnDEV = False 'when true displays the file
+    Dim blnHistory As Boolean 'True when the shared drive files are used
+    blnHistory = False 'when true deletes the file from the local drive
+    Dim intFiles As Double
+    intFiles = 5
+    Dim blnIssue As Boolean
+    Dim xmlObj As New MSXML2.XMLHTTP60
+    'xmlObj.Open "GET", SourceFile, True
+'    On Error GoTo FileIssue
+    'Dim ITIL_PI As DAO.Database 'Process Imports
+    Dim ITIL_Inv_WS_db As DAO.Database
+    'Dim ITIL_TabsAndTitles As DAO.Database
+    'Dim Wiz_IDs As DAO.Database
+    Dim Wiz_Tabs As DAO.Database
+    Dim ITIL_WT As DAO.Database
+    'Dim FDdb As DAO.Database 'FD Overall
+    Dim EIdb As DAO.Database 'End Items
+    Dim IDdb As DAO.Database 'ID Overall
+    'Dim UALdb As DAO.Database 'User Action Log
+    Dim WEdb As DAO.Database 'Wizard Entities
+    Dim MYdb As DAO.Database
+    Dim fso As Object 'File System Object
+    Dim fsoT As Object 'File System Object for Target
+    Dim fpo As Object 'File Path Object
+    Dim fpot As Object
+    Dim fco As Object 'File Collection Object
+    Dim fcot As Object
+    Dim fno As Object 'File Name Object
+    Dim fnot As Object
+    Dim MyFile As Variant
+    Dim rstTarget As Recordset
+    Dim rstFound As Recordset
+    Dim rstNewWizID As Recordset
+    Dim rstW As Recordset
+    Dim intSecondsLeft As Double
+    Dim intFC As Double 'File Counter
+    Dim intLC As Integer 'Last Column
+    Dim intRC As Integer 'Record Counter
+    Dim intSR As Integer
+    Dim intWS As Integer
+    Dim qdf As DAO.QueryDef
+    Dim strDays As String * 3
+    Dim strDur As String
+    Dim strFP As String 'File Path
+    Dim strFPS As String 'File Path Source
+    Dim strHours As String * 2
+    Dim strMinutes As String * 2
+    Dim strSeconds As String * 2
+    Dim strTempDate As String
+    Dim strWV As String * 8
+    Dim dtCurrent As Date
+    Dim dtLast As Date
+    'Set ITIL_PI = CurrentDb
+    'Set ITILdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Data.accdb", 0)
+    'Set Wiz_IDs = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Wiz_IDs.accdb", 0)
+    Set Wiz_Tabs = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Wiz_Tabs.accdb", 0)
+    Set ITIL_WT = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\ITIL_Wiz_Tables.accdb", 0)
+    'Set FDdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_FD_Overall.accdb", 0)
+    Set EIdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_End_Items.accdb", 0)
+    Set IDdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_ID_Overall.accdb", 0)
+    'Set UALdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_User_Action_Log.accdb", 0)
+    Set WEdb = OpenDatabase("C:\Users\RROSE66\Documents\ITIL\Wiz_Entities.accdb", 0)
+    'Set MYdb = CurrentDb
+    '**************Connect to Excel
+    Set xlsApp = CreateObject("Excel.Application")
+    Set xlsWB = xlsApp.ActiveWorkbook
+    'Set xlsApp = CreateObject("Excel.Application")
+    xlsApp.DisplayAlerts = False
+    '*************Get File names from dir
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set fsoT = CreateObject("scripting.filesystemobject")
+    strFPS = "https://dept.sp.ford.com/sites/avbomus/Shared Documents/Import Files - PDBOM/*.*"
+    strFP = "C:\Users\RROSE66\Documents\Archives\Import_Files\*.*"
+    If blnDEV Then
+        xlsApp.Visible = True
+    Else
+        xlsApp.Visible = False
+    End If
+    blnIssue = False
+    strCMD = ""
+    strCMD = strCMD & "select FileName from WizNeedingIDsV02"
+    Set rstNewWizID = CurrentDb.OpenRecordset("WizNeedingIDsV02")
+    If rstNewWizID.RecordCount > 0 Then
+        rstNewWizID.MoveFirst
+    End If
+    While Not rstNewWizID.EOF
+        'strWiz_Name = rstNewWizID.Fields("FileName").Value
+'        If Not fso.FileExists("C:\Users\RROSE66\Documents\Archives\Import_Files\Source\" & rstNewWizID.Fields("FileName").Value) Then
+'            fso.CopyFile "S:\AVBOM2\AVBOM2 Import Files\archive 2015\" & rstNewWizID.Fields("FileName").Value, "C:\Users\RROSE66\Documents\Archives\Import_Files\Source\"
+'        End If
+            Set xlsWB = xlsApp.Workbooks.Open(STR_SOURCE_PATH & rstNewWizID.Fields("FileName").Value)
+            'setup control variables
+            strWiz_Name = xlsWB.Name
+            xlsWB.UpdateLinks = xlUpdateLinksNever
+            xlsWB.Save
+            intTicket = 60
+            strWiz_Version = Trim(xlsWB.Worksheets("User Action Log").Cells(1, 1).Value)
+            strCMD = ""
+            strCMD = strCMD & "select count(*) from itil_vba_versions where "
+            strCMD = strCMD & "Wiz_Version = " & Chr(34) & strWiz_Version & Chr(34)
+            strCMD = strCMD & " and Wiz_Env = " & Chr(34) & "P" & Chr(34)
+            Set rstQ = CurrentDb.OpenRecordset(strCMD)
+            If rstQ.Fields(0).Value > 0 Then
+                rstQ.Close
+                Set rstQ = Nothing
+                strCMD = ""
+                strCMD = strCMD & "select wiz_Ver_id from itil_vba_versions where "
+                strCMD = strCMD & "Wiz_Version = " & Chr(34) & strWiz_Version & Chr(34)
+                strCMD = strCMD & " and Wiz_Env = " & Chr(34) & "P" & Chr(34)
+                Set rstQ = CurrentDb.OpenRecordset(strCMD)
+                intWiz_Ver_ID = rstQ.Fields(0).Value
+                rstQ.Close
+                Set rstQ = Nothing
+            Else
+                CurrentDb.Execute ("update ITIL_Counters set Wiz_Ver_ID = Wiz_Ver_ID+1")
+                Set rstQ = CurrentDb.OpenRecordset("ITIL_Counters", dbOpenTable)
+                intWiz_Ver_ID = rstQ.Fields("Wiz_Ver_ID").Value
+                rstQ.Close
+                Set rstQ = Nothing
+                strCMD = ""
+                strCMD = strCMD & "insert into ITIL_VBA_Versions(Wiz_Ver_ID, Wiz_Version, Wiz_Env, DateTimeStamp) select "
+                strCMD = strCMD & intWiz_Ver_ID & ", "
+                strCMD = strCMD & Chr(34) & strWiz_Version & Chr(34) & ", "
+                strCMD = strCMD & Chr(34) & "P" & Chr(34) & ", "
+                strCMD = strCMD & Chr(34) & Now() & Chr(34)
+                CurrentDb.Execute (strCMD)
+            End If
+            'add record to UAL report for all supporting files to be related to
+            lngFN_ID = GetFN_ID(rstNewWizID.Fields("FileName").Value)
+            'now load the control variables into the ITIL_Wiz_UAL_Report
+            CurrentDb.Execute ("update ITIL_Counters set Wiz_ID = Wiz_ID+1")
+            Set rstQ = CurrentDb.OpenRecordset("ITIL_Counters", dbOpenTable)
+            intWiz_ID = rstQ.Fields("Wiz_ID").Value
+            'use this table to manage which tabs exists
+            For intWS = 1 To xlsWB.Worksheets.Count
+                If xlsWB.Worksheets(intWS).Name = "PDB LOV" Then
+                    'Stop
+                End If
+                strCMD = "insert into ITIL_Wiz_Tabs (Wiz_ID, WorkSheet_Name) select "
+                strCMD = strCMD & intWiz_ID
+                strCMD = strCMD & ", " & Chr(34) & xlsWB.Worksheets(intWS).Name & Chr(34)
+                Wiz_Tabs.Execute (strCMD)
+            Next intWS
+            'Get the date the wizard was Issued (dtIssued)
+           'there are cases where this worksheet does not exist but the CID does
+            strCMD = ""
+            strCMD = strCMD & "select count(*) from ITIL_Wiz_Tabs where WorkSheet_Name = " & Chr(34) & "ID-Overall" & Chr(34) & " and Wiz_ID = " & intWiz_ID
+            Set rstQ = Wiz_Tabs.OpenRecordset(strCMD)
+            If rstQ.Fields(0).Value > 0 Then
+                dtIssued = xlsWB.Worksheets("ID-Overall").Cells(1, 5).Value
+                strENV = IIf(Mid(xlsWB.Worksheets("ID-Overall").Cells(2, 3).Value, 12, 1) = ".", "P", "Q")
+                strCDSID = xlsWB.Worksheets("ID-Overall").Cells(1, 3).Value
+                If Not IsEmpty(xlsWB.Worksheets("ID-Overall").Cells(2, 13).Value) Then
+                    'this is the last XML that was submitted
+                    'stop
+                End If
+            Else
+                strCMD = ""
+                strCMD = strCMD & "select count(*) from ITIL_Wiz_Tabs where WorkSheet_Name = "
+                strCMD = strCMD & Chr(34) & "CID" & Chr(34) & " and Wiz_ID = " & intWiz_ID
+                Set rstQ = Wiz_Tabs.OpenRecordset(strCMD)
+                If rstQ.Fields(0).Value > 0 Then
+                    dtIssued = xlsWB.Worksheets("CID").Cells(1, 6).Value
+                Else
+                    dtIssued = CDate(Mid(Right(xlsWB.Name, 16), 1, 2) & "/" & Mid(Right(xlsWB.Name, 16), 3, 2) & "/" & Mid(Right(xlsWB.Name, 16), 5, 2))
+                End If
+                'obtaining error when date is formatted as
+                '24.06.2015_14:02:31
+                '28/07/2015_01:02:44 p.m.
+            End If
+            rstQ.Close
+            Set rstQ = Nothing
+            Set xlsWS = xlsWB.Worksheets("User Action Log")
+            If strCDSID = "" Then
+                strCDSID = Mid(xlsWS.Cells(3, 4).Value, 8, 8)
+            End If
+            Set xlsWS = Nothing
+            'Finished gathering the variables used to identify the wizard
+            strENV = "P"
+            strCMD = ""
+            strCMD = strCMD & "insert into ITIL_Wiz_IDs ("
+            strCMD = strCMD & "Wiz_ID, Ticket, Wiz_Ver_ID, Wiz_name, Issued_Date, Env, Wiz_owner_CDSID, FN_ID) select "
+            strCMD = strCMD & intWiz_ID & ", "
+            strCMD = strCMD & intTicket
+            strCMD = strCMD & ", " & intWiz_Ver_ID
+            strCMD = strCMD & ", " & Chr(34) & strWiz_Name & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & dtIssued & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & strENV & Chr(34)
+            strCMD = strCMD & ", " & Chr(34) & strCDSID & Chr(34)
+            strCMD = strCMD & ", " & GetFN_ID(rstNewWizID.Fields("FileName").Value)
+            CurrentDb.Execute (strCMD)
+            xlsWB.Close
+        Set xlsWB = Nothing
+        strWiz_Name = ""
+        intWiz_Ver_ID = 0
+        strCDSID = ""
+       ' fso.DeleteFile "C:\Users\RROSE66\Documents\Archives\Import_Files\Source\" & rstNewWizID.Fields("FileName").Value
+        blnIssue = False
+        rstNewWizID.MoveNext
+    Wend
+End Sub

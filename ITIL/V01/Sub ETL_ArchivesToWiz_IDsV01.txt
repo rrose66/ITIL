@@ -1,0 +1,55 @@
+Sub ETL_ArchivesToWiz_IDsV01()
+    'the ITIL_ArchivedImportFiles is related to the ITIL_Wiz_IDs
+    'file names not in Wiz_IDs are normalized
+    'then inserted
+    'Normalize the DateTimes first
+    'First get the last DT_ID from counters
+    'Then loop around the needing Wiz_IDs doing the insert
+    'Finally update the DT_ID with the last inserted
+    'Now normalize the File Name
+    
+    'Maintain Dates
+    Dim lngDT_ID As Long
+    Dim rstLastDT_ID As Recordset
+    Dim rstNewDTs As Recordset
+    Dim rstC As Recordset
+    Set rstLastDT_ID = CurrentDb.OpenRecordset("select DT_ID from ITIL_Counters")
+    lngDT_ID = rstLastDT_ID.Fields(0).Value
+    Set rstNewDTs = CurrentDb.OpenRecordset("NewDTsV02")
+    Set rstC = CurrentDb.OpenRecordset("select count(*) from NewDTsV02")
+    strCMD = ""
+    strCMD = strCMD & "update ITIL_Counters set DT_ID = DT_ID + " & rstC.Fields(0).Value
+    CurrentDb.Execute (strCMD)
+    'CurrentDb.Execute ("AddNewDTs") 'this will not work because it needs thhe DT_ID  delete this query
+    While Not rstNewDTs.EOF
+        lngDT_ID = lngDT_ID + 1
+        strCMD = ""
+        strCMD = strCMD & "insert into ITIL_DateTimeRef (DT_ID, ITIL_DateTime) select "
+        strCMD = strCMD & lngDT_ID
+        strCMD = strCMD & ", #" & rstNewDTs.Fields(0).Value & "#"
+        CurrentDb.Execute (strCMD)
+        rstNewDTs.MoveNext
+    Wend
+    
+    'Maintain File Names
+    Dim lngFN_ID As Long
+    Dim rstNewFilesForWizIDs As Recordset
+    Set rstLastDT_ID = CurrentDb.OpenRecordset("select FN_ID from ITIL_Counters")
+    lngFN_ID = rstLastDT_ID.Fields(0).Value
+    Set rstNewFilesForWizIDs = CurrentDb.OpenRecordset("NewFileNamesV02")
+    rstC.Close
+    Set rstC = Nothing
+    Set rstC = CurrentDb.OpenRecordset("select count(*) from NewFileNamesV02")
+    strCMD = ""
+    strCMD = strCMD & "update ITIL_Counters set FN_ID = FN_ID + " & rstC.Fields(0).Value
+    CurrentDb.Execute (strCMD)
+    While Not rstNewFilesForWizIDs.EOF
+        lngFN_ID = lngFN_ID + 1
+        strCMD = ""
+        strCMD = strCMD & "insert into ITIL_Wiz_File_Names (FileName, FN_ID) select "
+        strCMD = strCMD & Chr(34) & rstNewFilesForWizIDs.Fields(0).Value & Chr(34)
+        strCMD = strCMD & ", " & lngFN_ID
+        CurrentDb.Execute (strCMD)
+        rstNewFilesForWizIDs.MoveNext
+    Wend
+End Sub
